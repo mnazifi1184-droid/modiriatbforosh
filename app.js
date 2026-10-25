@@ -17,6 +17,7 @@
   const tokenBox = document.getElementById("token-box");
   const tokenInput = document.getElementById("token-input");
   const tokenSave = document.getElementById("token-save");
+  const tokenTest = document.getElementById("token-test");
   const tokenStatus = document.getElementById("token-status");
   const publishInfo = document.getElementById("publish-info");
 
@@ -44,6 +45,38 @@
     tokenStatus.style.color = "var(--accent-dark)";
     publishInfo.hidden = true;
   });
+
+
+  async function testToken() {
+    const t = (tokenInput.value || "").trim();
+    if (!t) { tokenStatus.textContent = "اول توکن را وارد کنید."; tokenStatus.style.color = "var(--danger)"; return; }
+    tokenStatus.textContent = "در حال تست…";
+    tokenStatus.style.color = "var(--muted)";
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO}`, {
+        headers: { Authorization: `Bearer ${t}`, Accept: "application/vnd.github+json" }
+      });
+      if (res.ok) {
+        const j = await res.json();
+        const perm = j.permissions && j.permissions.push ? "دارید" : "ندارید";
+        tokenStatus.textContent = `✓ توکن معتبر است — دسترسی push: ${perm}`;
+        tokenStatus.style.color = "var(--accent-dark)";
+      } else if (res.status === 401) {
+        tokenStatus.textContent = "✗ توکن نامعتبر است (401) — احتمالاً ناقص کپی شده یا باطل شده.";
+        tokenStatus.style.color = "var(--danger)";
+      } else if (res.status === 403) {
+        tokenStatus.textContent = "⚠ پاسخ 403 — یا توکن دسترسی ریپو ندارد یا api.github.com از شبکه‌ی شما مسدود است.";
+        tokenStatus.style.color = "var(--danger)";
+      } else {
+        tokenStatus.textContent = "پاسخ غیرمنتظره: " + res.status;
+        tokenStatus.style.color = "var(--danger)";
+      }
+    } catch {
+      tokenStatus.textContent = "✗ ارتباط با api.github.com برقرار نشد — اینترنت شما به گیت‌هاب نمی‌رسد.";
+      tokenStatus.style.color = "var(--danger)";
+    }
+  }
+  tokenTest.addEventListener("click", testToken);
 
   // ---------- پیام‌ها ----------
   function showMsg(el, text) {
