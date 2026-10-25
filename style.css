@@ -502,6 +502,8 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
 .check input { accent-color: var(--accent, #1f6e5c); width: 1rem; height: 1rem; }
 .modal-actions { margin-top: 1rem; }
 
+.modal-backdrop[hidden] { display: none !important; }
+
 /* نشان‌های دسترسی در جدول کاربران */
 .perm {
   display: inline-block;
