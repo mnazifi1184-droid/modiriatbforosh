@@ -50,7 +50,7 @@ function doPost(e) {
         return respond_(login(payload));
 
       case 'listUsers':
-        return respond_(adminGuard_(payload, listUsers));
+        return respond_(adminGuard_(payload, listUsers_));
 
       case 'saveUser':
         return respond_(adminGuard_(payload, saveUser));
