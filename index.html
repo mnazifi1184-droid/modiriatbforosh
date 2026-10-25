@@ -22,7 +22,7 @@
   <main class="container">
     <section class="upload-section">
       <h1>فایل اکسل را آپلود کنید</h1>
-      <p class="hint">فرمت‌های مجاز: <strong>xlsx</strong>، <strong>xls</strong> و <strong>csv</strong> — حداکثر حجم پیشنهادی: ۵ مگابایت</p>
+      <p class="hint">فرمت‌های مجاز: <strong>xlsx</strong>، <strong>xls</strong> و <strong>csv</strong> — حداکثر حجم پیشنهادی: ۵ مگابایت. هر شیت فایل به بخش هم‌نام خودش درج می‌شود و برای هر شیت جداگانه مشخص می‌کنید که «جایگزینی کامل» باشد یا «افزودن به انتها».</p>
 
       <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="انتخاب فایل اکسل">
         <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
@@ -48,6 +48,24 @@
 
       <div class="msg error" id="msg-error" hidden></div>
       <div class="msg success" id="msg-success" hidden></div>
+
+      <div class="mapping-box" id="mapping-box" hidden>
+        <div class="mapping-title">شیت‌های فایل «<span id="mapping-file"></span>» و مقصد آن‌ها</div>
+        <div class="table-wrap mapping-wrap">
+          <table class="mapping-table">
+            <thead>
+              <tr>
+                <th>شیت فایل</th>
+                <th>ردیف‌ها</th>
+                <th>شیت مقصد</th>
+                <th>حالت درج</th>
+                <th>وضعیت</th>
+              </tr>
+            </thead>
+            <tbody id="mapping-body"></tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="actions-row">
         <button class="btn primary" id="btn-view" disabled>پیش‌نمایش محلی</button>

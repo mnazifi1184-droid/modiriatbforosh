@@ -289,3 +289,110 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
 .token-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 .token-status { font-size: 13px; margin: 8px 0 0; width: 100%; }
 .file-meta { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+
+/* ---------- جدول نگاشت شیت‌ها ---------- */
+.mapping-box {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.mapping-title {
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.mapping-wrap { border: 1px solid var(--border); border-radius: 10px; }
+.mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.mapping-table th {
+  padding: 10px 8px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.mapping-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  vertical-align: middle;
+}
+.mapping-table select {
+  width: 100%;
+  max-width: 190px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+.sheet-name {
+  font-weight: 700;
+  color: var(--text);
+  direction: ltr;
+  display: inline-block;
+}
+.auto-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+.row-status {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.row-status.running { color: #1d4ed8; }
+.row-status.success { color: #15803d; }
+.row-status.error { color: var(--danger); }
+.row-err { color: var(--danger); font-weight: 700; }
+
+/* ---------- تب‌های شیت در صفحه‌ی نمایش ---------- */
+.sheet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sheet-tab {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.sheet-tab:hover { background: var(--bg); color: var(--text); }
+.sheet-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sheet-tab .tab-count {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 11px;
+  opacity: .85;
+}
