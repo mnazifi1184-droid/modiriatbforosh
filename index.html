@@ -49,12 +49,27 @@
       <div class="msg error" id="msg-error" hidden></div>
       <div class="msg success" id="msg-success" hidden></div>
 
-      <button class="btn primary" id="btn-view" disabled>مشاهده‌ی داده‌ها ←</button>
+      <div class="actions-row">
+        <button class="btn primary" id="btn-view" disabled>پیش‌نمایش محلی</button>
+        <button class="btn publish" id="btn-publish" disabled>انتشار برای همه</button>
+      </div>
+      <p class="publish-hint" id="publish-info">
+        انتشار برای همه به توکن گیت‌هاب با دسترسی «Contents: Read and write» نیاز دارد — توکن فقط در مرورگر شما ذخیره می‌شود.
+      </p>
+
+      <details class="token-box" id="token-box">
+        <summary>تنظیمات مدیر — توکن انتشار</summary>
+        <div class="token-inner">
+          <input type="password" id="token-input" class="token-input" placeholder="github_pat_…" aria-label="توکن گیت‌هاب">
+          <button class="btn small" id="token-save">ذخیره‌ی توکن</button>
+          <p class="token-status" id="token-status"></p>
+        </div>
+      </details>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container">مدیریت فروش — داده‌ها فقط در مرورگر شما ذخیره می‌شوند</div>
+    <div class="container">مدیریت فروش — داده‌ی منتشرشده برای همه‌ی کاربران قابل مشاهده است</div>
   </footer>
 
   <script src="vendor/xlsx.full.min.js"></script>

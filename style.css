@@ -257,3 +257,35 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
   .dropzone { padding: 36px 16px; }
   .btn { width: 100%; }
 }
+
+/* دکمه‌های انتشار و توکن مدیر */
+.actions-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn.publish {
+  background: var(--surface);
+  color: var(--accent-dark);
+  border: 2px solid var(--accent);
+}
+.btn.publish:hover:not(:disabled) { background: var(--accent-soft); }
+.btn.publish:disabled { border-color: #c4ccd4; color: #8a95a1; background: var(--surface); }
+.btn.small { font-size: 13px; padding: 8px 18px; margin-top: 0; }
+.publish-hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+.token-box {
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.token-box summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--muted); }
+.token-inner { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.token-input {
+  flex: 1; min-width: 220px;
+  font-family: inherit; font-size: 13px;
+  padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text);
+  direction: ltr; text-align: left;
+}
+.token-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.token-status { font-size: 13px; margin: 8px 0 0; width: 100%; }
+.file-meta { color: var(--muted); font-size: 13px; margin: 2px 0 0; }
