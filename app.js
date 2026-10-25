@@ -302,6 +302,10 @@
         else { target = dest; }
       }
 
+      // اگر شیت مقصد در گوگل‌شیت وجود نداشت، خودکار ساخته می‌شود —
+      // نیازی به ساخت دستی شیت نیست
+      allowCreate = true;
+
       if (info.rows.length > MAX_ROWS) {
         setRowStatus(i, "error", "بیش از " + toFa(MAX_ROWS) + " ردیف");
         continue;
