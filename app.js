@@ -1,11 +1,7 @@
-// منطق صفحه‌ی آپلود — نسخه‌ی چندشیتی (هر شیت فایل → یک فایل JSON در ریپو)
+// منطق صفحه‌ی آپلود — انتشار مستقیم به گوگل‌شیت از طریق Apps Script
 (function () {
-  const REPO = "mnazifi1184-droid/modiriatbforosh";
-  const API_BASE = "https://api.github.com/repos/" + REPO + "/contents/";
-  const RAW_BASE = "https://mnazifi1184-droid.github.io/modiriatbforosh/";
-  const TOKEN_KEY = "mbf_github_token";
+  const SERVICE_KEY = "mbf_script_url"; // آدرس سرویس Apps Script فقط در مرورگر مدیر
 
-  // شیت‌های مقصد پیش‌فرض — هم‌نام شیت‌های گوگل‌شیت
   const KNOWN_SHEETS = ["Products", "Barcod", "Pak", "Omr", "Endmonth"];
 
   const MAX_MB = 5;
@@ -33,14 +29,13 @@
 
   let selectedFile = null;
   let parsedSheets = []; // [{name, columns, rows}]
-  let destinationNames = KNOWN_SHEETS.slice();
   let inProgress = false;
 
-  // ---------- توکن ----------
-  const savedToken = localStorage.getItem(TOKEN_KEY);
-  if (savedToken) {
-    tokenInput.value = savedToken;
-    tokenStatus.textContent = "✓ توکن ذخیره شده — می‌توانید انتشار بدهید";
+  // ---------- آدرس سرویس ----------
+  const savedUrl = localStorage.getItem(SERVICE_KEY);
+  if (savedUrl) {
+    tokenInput.value = savedUrl;
+    tokenStatus.textContent = "✓ آدرس سرویس ذخیره شده — می‌توانید انتشار بدهید";
     tokenStatus.style.color = "var(--accent-dark)";
     publishInfo.hidden = true;
   }
@@ -48,38 +43,38 @@
   tokenSave.addEventListener("click", () => {
     const t = tokenInput.value.trim();
     if (!t) return;
-    localStorage.setItem(TOKEN_KEY, t);
-    tokenStatus.textContent = "✓ توکن ذخیره شد — فقط در همین مرورگر";
+    localStorage.setItem(SERVICE_KEY, t);
+    tokenStatus.textContent = "✓ آدرس سرویس ذخیره شد — فقط در همین مرورگر";
     tokenStatus.style.color = "var(--accent-dark)";
     publishInfo.hidden = true;
   });
 
   async function testToken() {
     const t = (tokenInput.value || "").trim();
-    if (!t) { tokenStatus.textContent = "اول توکن را وارد کنید."; tokenStatus.style.color = "var(--danger)"; return; }
+    if (!t) { tokenStatus.textContent = "اول آدرس سرویس را وارد کنید."; tokenStatus.style.color = "var(--danger)"; return; }
     tokenStatus.textContent = "در حال تست…";
     tokenStatus.style.color = "var(--muted)";
     try {
-      const res = await fetch("https://api.github.com/repos/" + REPO, {
-        headers: { Authorization: "Bearer " + t, Accept: "application/vnd.github+json" }
+      const res = await fetch(t, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "ping" })
       });
-      if (res.ok) {
-        const j = await res.json();
-        const perm = j.permissions && j.permissions.push ? "دارید" : "ندارید";
-        tokenStatus.textContent = "✓ توکن معتبر است — دسترسی push: " + perm;
+      if (!res.ok) {
+        tokenStatus.textContent = "پاسخ غیرمنتظره: " + res.status + " — مطمئن شوید استقرار «Anyone» است.";
+        tokenStatus.style.color = "var(--danger)";
+        return;
+      }
+      const j = await res.json();
+      if (j.success) {
+        tokenStatus.textContent = "✓ سرویس وصل است — " + (j.sheets ? j.sheets.length : 0) + " شیت پیدا شد.";
         tokenStatus.style.color = "var(--accent-dark)";
-      } else if (res.status === 401) {
-        tokenStatus.textContent = "✗ توکن نامعتبر است (401) — احتمالاً ناقص کپی شده یا باطل شده.";
-        tokenStatus.style.color = "var(--danger)";
-      } else if (res.status === 403) {
-        tokenStatus.textContent = "⚠ پاسخ 403 — یا توکن دسترسی ریپو ندارد یا api.github.com از شبکه‌ی شما مسدود است.";
-        tokenStatus.style.color = "var(--danger)";
       } else {
-        tokenStatus.textContent = "پاسخ غیرمنتظره: " + res.status;
+        tokenStatus.textContent = "سرویس پاسخ داد ولی خطا دارد: " + (j.error || "نامشخص");
         tokenStatus.style.color = "var(--danger)";
       }
     } catch {
-      tokenStatus.textContent = "✗ ارتباط با api.github.com برقرار نشد — اینترنت شما به گیت‌هاب نمی‌رسد.";
+      tokenStatus.textContent = "✗ ارتباط با script.google.com برقرار نشد — اینترنت/VPN را بررسی کنید.";
       tokenStatus.style.color = "var(--danger)";
     }
   }
@@ -94,8 +89,7 @@
   }
 
   function setStatus(type, text) {
-    const el = type === "error" ? msgError : msgSuccess;
-    showMsg(el, text);
+    showMsg(type === "error" ? msgError : msgSuccess, text);
   }
 
   function fmtSize(bytes) {
@@ -149,23 +143,14 @@
     reader.onerror = () => { setStatus("error", "خواندن فایل ناموفق بود."); resetSelection(); };
     reader.onload = e => {
       try {
-        const isCsv = /\.csv$/i.test(file.name);
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
         if (!wb.SheetNames.length) { setStatus("error", "فایل هیچ شیتی ندارد."); resetSelection(); return; }
 
         parsedSheets = wb.SheetNames.map(name => {
           const ws = wb.Sheets[name];
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: "", raw: false });
-          // حذف ردیف‌های کاملاً خالی انتهایی
-          while (rows.length && Object.values(rows[rows.length - 1]).every(v => String(v == null ? "" : v).trim() === "")) rows.pop();
-          const columns = rows.length ? Object.keys(rows[0]) : [];
-          return { name: name, columns: columns, rows: rows };
-        });
-
-        // شیت‌های فایل هم به فهرست مقصدها اضافه می‌شوند
-        destinationNames = KNOWN_SHEETS.slice();
-        parsedSheets.forEach(s => {
-          if (!destinationNames.includes(s.name)) destinationNames.push(s.name);
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+          while (rows.length && rows[rows.length - 1].every(v => String(v == null ? "" : v).trim() === "")) rows.pop();
+          return { name: name, rows: rows };
         });
 
         renderMapping();
@@ -191,13 +176,11 @@
       const matched = KNOWN_SHEETS.includes(info.name);
       const tr = document.createElement("tr");
 
-      // نام شیت
       const nameTd = document.createElement("td");
       nameTd.innerHTML = '<span class="sheet-name">' + escapeHtml(info.name) + "</span>" +
         (matched ? '<span class="auto-badge">هم‌نام</span>' : "");
       tr.appendChild(nameTd);
 
-      // تعداد ردیف‌ها
       const rowsTd = document.createElement("td");
       if (info.rows.length > MAX_ROWS) {
         rowsTd.innerHTML = '<span class="row-err">' + toFa(info.rows.length) + " — بیش از حد مجاز</span>";
@@ -206,7 +189,6 @@
       }
       tr.appendChild(rowsTd);
 
-      // شیت مقصد
       const destTd = document.createElement("td");
       if (matched) {
         destTd.innerHTML = '<span class="sheet-name">' + escapeHtml(info.name) + "</span>";
@@ -228,7 +210,6 @@
       }
       tr.appendChild(destTd);
 
-      // حالت درج
       const modeTd = document.createElement("td");
       const modeSelect = document.createElement("select");
       modeSelect.id = "mode_" + index;
@@ -241,7 +222,6 @@
       modeTd.appendChild(modeSelect);
       tr.appendChild(modeTd);
 
-      // وضعیت
       const statusTd = document.createElement("td");
       statusTd.id = "rowstatus_" + index;
       statusTd.className = "row-status";
@@ -264,52 +244,39 @@
     if (!parsedSheets.length) return;
     const local = {};
     parsedSheets.forEach(s => {
-      local[s.name] = { meta: { name: selectedFile.name, sheet: s.name, updated: new Date().toISOString() }, columns: s.columns, rows: s.rows };
+      const rows = s.rows.slice(1).map(r => {
+        const obj = {};
+        (s.rows[0] || []).forEach((h, i) => { obj[String(h || "ستون " + (i + 1))] = r[i] === undefined ? "" : String(r[i]); });
+        return obj;
+      });
+      local[s.name] = { meta: { name: selectedFile.name, sheet: s.name, updated: new Date().toISOString() }, columns: (s.rows[0] || []).map(String), rows: rows };
     });
     localStorage.setItem("mbf_sheets", JSON.stringify(local));
-    localStorage.removeItem("mbf_preview_only");
     location.href = "view.html";
   });
 
-  // ---------- انتشار برای همه (GitHub API) ----------
-  function ghHeaders(token) {
-    return { Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
-  }
-
-  async function getFileSha(token, path) {
-    const res = await fetch(API_BASE + path, { headers: ghHeaders(token) });
-    if (res.ok) return (await res.json()).sha;
-    if (res.status === 404) return null;
-    throw new Error("http " + res.status);
-  }
-
-  async function putFile(token, path, contentObj, message) {
-    const sha = await getFileSha(token, path);
-    const body = {
-      message: message,
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(contentObj, null, 2)))),
-      branch: "main"
-    };
-    if (sha) body.sha = sha;
-    const res = await fetch(API_BASE + path, { method: "PUT", headers: ghHeaders(token), body: JSON.stringify(body) });
+  // ---------- انتشار مستقیم به گوگل‌شیت ----------
+  async function callService(url, payload) {
+    const res = await fetch(url, {
+      method: "POST",
+      // Content-Type ساده تا درخواست preflight (OPTIONS) راه نیفتد —
+      // Apps Script درخواست preflight را جواب نمی‌دهد
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
     if (!res.ok) throw new Error("http " + res.status);
-  }
-
-  async function fetchExistingRows(target) {
-    // خواندن داده‌ی فعلی شیت مقصد از سایت منتشرشده (بدون توکن)
-    const res = await fetch("data/" + encodeURIComponent(target) + ".json?t=" + Date.now(), { cache: "no-store" });
-    if (!res.ok) return [];
     const j = await res.json();
-    return Array.isArray(j.rows) ? j.rows : [];
+    if (!j.success) throw new Error(j.error || "خطای نامشخص سرویس");
+    return j;
   }
 
   btnPublish.addEventListener("click", async () => {
     if (inProgress) return;
-    const token = (tokenInput.value || "").trim();
-    if (!token) {
+    const serviceUrl = (tokenInput.value || "").trim();
+    if (!serviceUrl) {
       publishInfo.hidden = false;
       tokenInput.focus();
-      setStatus("error", "برای انتشار مشترک، اول توکن گیت‌هاب را وارد کنید (بخش تنظیمات مدیر).");
+      setStatus("error", "برای انتشار، اول آدرس سرویس Apps Script را در تنظیمات مدیر وارد کنید.");
       return;
     }
     if (!parsedSheets.length) return;
@@ -372,50 +339,21 @@
     for (let t = 0; t < tasks.length; t++) {
       const task = tasks[t];
       setRowStatus(task.index, "running", "در حال درج…");
-      setStatus("loading", "در حال انتشار شیت «" + task.target + "» (" + toFa(t + 1) + " از " + toFa(tasks.length) + ")…");
+      setStatus("loading", "در حال درج شیت «" + task.target + "» (" + toFa(t + 1) + " از " + toFa(tasks.length) + ")…");
       try {
-        let rows = task.data.rows;
-        if (task.mode === "append") {
-          const existing = await fetchExistingRows(task.target);
-          rows = existing.concat(task.data.rows);
-        }
-        const payload = {
-          meta: { name: selectedFile.name, sheet: task.target, mode: task.mode, updated: new Date().toISOString() },
-          columns: task.data.columns,
-          rows: rows
-        };
-        await putFile(
-          token,
-          "data/" + encodeURIComponent(task.target) + ".json",
-          payload,
-          "به‌روزرسانی شیت " + task.target + " (" + task.mode + ") از فایل " + selectedFile.name
-        );
-        setRowStatus(task.index, "success", "✔ " + toFa(task.data.rows.length) + " ردیف درج شد");
+        const result = await callService(serviceUrl, {
+          action: "import",
+          rows: task.data.rows,
+          targetSheet: task.target,
+          mode: task.mode,
+          allowCreate: task.allowCreate
+        });
+        setRowStatus(task.index, "success", "✔ " + toFa(result.rows || task.data.rows.length) + " ردیف درج شد");
         okCount++;
       } catch (err) {
-        const msg = String(err && err.message || "");
-        let text = "خطا: " + (msg || "نامشخص");
-        if (msg === "http 401" || msg === "http 403") text = "خطا: توکن معتبر نیست یا دسترسی نوشتن ندارد";
-        if (msg === "http 404" && !task.allowCreate) text = "خطا: شیت مقصد پیدا نشد";
-        setRowStatus(task.index, "error", text);
+        setRowStatus(task.index, "error", "خطا: " + String(err && err.message || "نامشخص"));
         failCount++;
       }
-    }
-
-    // به‌روزرسانی مانیفست فهرست شیت‌ها
-    try {
-      setStatus("loading", "در حال به‌روزرسانی فهرست شیت‌ها…");
-      let manifest = { sheets: {} };
-      try {
-        const mres = await fetch("data/sheets.json?t=" + Date.now(), { cache: "no-store" });
-        if (mres.ok) { const mj = await mres.json(); if (mj && mj.sheets) manifest = mj; }
-      } catch {}
-      tasks.forEach(task => {
-        manifest.sheets[task.target] = { updated: new Date().toISOString(), rows: (task.mode === "append" ? "append" : task.data.rows.length), file: selectedFile.name };
-      });
-      await putFile(token, "data/sheets.json", manifest, "به‌روزرسانی فهرست شیت‌ها");
-    } catch {
-      // مانیفست حیاتی نیست؛ صفحه‌ی نمایش شیت‌های شناخته‌شده را مستقیم هم امتحان می‌کند
     }
 
     inProgress = false;
@@ -423,19 +361,11 @@
     btnPublish.textContent = "انتشار برای همه";
 
     if (failCount === 0) {
-      // ذخیره‌ی محلی برای پیش‌نمایش فوری
-      const local = {};
-      parsedSheets.forEach(s => {
-        local[s.name] = { meta: { name: selectedFile.name, sheet: s.name, updated: new Date().toISOString() }, columns: s.columns, rows: s.rows };
-      });
-      localStorage.setItem("mbf_sheets", JSON.stringify(local));
-      localStorage.setItem("mbf_preview_only", "1");
-      setStatus("success", "✓ انتشار موفق! تا یک دقیقه دیگر برای همه نمایش داده می‌شود.");
-      setTimeout(() => (location.href = "view.html"), 1500);
+      setStatus("success", "✓ درج در گوگل‌شیت تمام شد! صفحه‌ی نمایش را دوباره باز کنید تا داده‌های جدید را ببینید.");
     } else if (okCount > 0) {
-      setStatus("error", "انتشار ناقص بود: " + toFa(okCount) + " شیت موفق، " + toFa(failCount) + " شیت ناموفق. جزئیات در جدول بالا.");
+      setStatus("error", "درج ناقص بود: " + toFa(okCount) + " شیت موفق، " + toFa(failCount) + " شیت ناموفق. جزئیات در جدول بالا.");
     } else {
-      setStatus("error", "انتشار ناموفق بود. توکن و اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.");
+      setStatus("error", "درج ناموفق بود. آدرس سرویس، استقرار «Anyone» و اتصال VPN را بررسی کنید.");
     }
   });
 

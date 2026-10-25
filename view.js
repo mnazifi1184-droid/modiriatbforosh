@@ -1,4 +1,4 @@
-// منطق صفحه‌ی نمایش — هر شیت یک فایل JSON در data/
+// منطق صفحه‌ی نمایش — خواندن مستقیم از گوگل‌شیت (endpoint gviz)
 (function () {
   const content = document.getElementById("content");
   const emptyState = document.getElementById("empty-state");
@@ -10,14 +10,19 @@
   const tbody = document.getElementById("table-body");
   const sheetTabs = document.getElementById("sheet-tabs");
 
-  // شیت‌های شناخته‌شده — هم‌نام شیت‌های گوگل‌شیت
+  // شناسه‌ی گوگل‌شیت — از آدرس شیت کپی می‌شود:
+  // docs.google.com/spreadsheets/d/«این بخش»/edit
+  const SHEET_ID = "SHEET_ID_PLACEHOLDER";
+
+  // شیت‌های شناخته‌شده
   const KNOWN_SHEETS = ["Products", "Barcod", "Pak", "Omr", "Endmonth"];
 
-  let sheets = {};       // name -> {meta, columns, rows}
-  let sheetNames = [];   // ترتیب تب‌ها
+  let sheets = {};
+  let sheetNames = [];
   let active = null;
   let allRows = [];
   let rows = [];
+  let loadedAny = false;
 
   function toFa(n) {
     return Number(n).toLocaleString("fa-IR");
@@ -31,6 +36,44 @@
       .replace(/"/g, "&quot;");
   }
 
+  /* ---------- خواندن یک شیت از gviz ---------- */
+  async function fetchSheet(name) {
+    const url =
+      "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+      "/gviz/tq?tqx=out:json&headers=1&sheet=" + encodeURIComponent(name);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("http " + res.status);
+    const text = await res.text();
+    // پاسخ gviz داخل google.visualization.Query.setResponse(...) است
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1) throw new Error("bad envelope");
+    const json = JSON.parse(text.slice(start, end + 1));
+    if (json.status === "error") throw new Error("sheet error");
+    const table = json.table;
+    if (!table) throw new Error("no table");
+
+    // عناوین ستون‌ها
+    const headers = (table.cols || []).map((c, i) =>
+      String((c && c.label) || "ستون " + (i + 1))
+    );
+
+    // ردیف‌ها — همه‌ی مقادیر به رشته تبدیل می‌شوند تا صفر ابتدایی حفظ شود
+    const out = (table.rows || []).map(r => {
+      const obj = {};
+      headers.forEach((h, i) => {
+        const cell = r.c && r.c[i];
+        let v = "";
+        if (cell) v = cell.f !== undefined && cell.f !== null ? String(cell.f) : (cell.v === null || cell.v === undefined ? "" : String(cell.v));
+        obj[h] = v;
+      });
+      return obj;
+    }).filter(obj => Object.values(obj).some(v => String(v).trim() !== ""));
+
+    return { meta: { name: name, sheet: name }, columns: headers, rows: out };
+  }
+
+  /* ---------- رندر ---------- */
   function render() {
     thead.innerHTML = "";
     tbody.innerHTML = "";
@@ -67,24 +110,16 @@
     if (!data) return;
     allRows = data.rows || [];
     content.hidden = false;
-    fileName.textContent = (data.meta && data.meta.name) || "نامشخص";
-    let metaText = "";
-    if (data.meta && data.meta.updated) {
-      const d = new Date(data.meta.updated);
-      metaText += "شیت «" + name + "» — آخرین به‌روزرسانی: " + d.toLocaleDateString("fa-IR") + " " + d.toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" });
-    }
-    if (previewOnly) metaText += " (پیش‌نمایش محلی — برای همه منتشر نشده)";
-    fileMeta.textContent = metaText;
+    fileName.textContent = (data.meta && data.meta.name) || "گوگل‌شیت";
+    fileMeta.textContent = "شیت «" + name + "» — مستقیم از گوگل‌شیت خوانده شد";
     search.value = "";
     applyFilter();
-    // حالت فعال تب‌ها
     [...sheetTabs.children].forEach(btn => {
       btn.classList.toggle("active", btn.dataset.sheet === name);
     });
   }
 
   function renderTabs() {
-    if (sheetNames.length <= 1) { sheetTabs.hidden = sheetNames.length < 1; }
     sheetTabs.hidden = false;
     sheetTabs.innerHTML = "";
     sheetNames.forEach(name => {
@@ -98,7 +133,7 @@
     });
   }
 
-  function loadFromObject(obj, isLocal) {
+  function loadFromObject(obj) {
     sheets = {};
     sheetNames = [];
     Object.keys(obj).forEach(name => {
@@ -108,9 +143,7 @@
         sheetNames.push(name);
       }
     });
-    previewOnly = !!isLocal;
     if (!sheetNames.length) return false;
-    // ترتیب: شیت‌های شناخته‌شده اول، بعد بقیه
     sheetNames.sort((a, b) => {
       const ia = KNOWN_SHEETS.indexOf(a), ib = KNOWN_SHEETS.indexOf(b);
       if (ia !== -1 && ib !== -1) return ia - ib;
@@ -124,53 +157,42 @@
     return true;
   }
 
-  let previewOnly = false;
-
-  // اول: فهرست شیت‌های منتشرشده را از مانیفست (یا شیت‌های شناخته‌شده) بخوان
-  fetch("data/sheets.json?t=" + Date.now(), { cache: "no-store" })
-    .then(res => (res.ok ? res.json() : { sheets: {} }))
-    .catch(() => ({ sheets: {} }))
-    .then(manifest => {
-      const published = manifest && manifest.sheets ? Object.keys(manifest.sheets) : [];
-      const candidates = [];
-      KNOWN_SHEETS.forEach(n => { if (!candidates.includes(n)) candidates.push(n); });
-      published.forEach(n => { if (!candidates.includes(n)) candidates.push(n); });
-
-      // همه‌ی شیت‌های کاندید را موازی بگیر؛ هر کدام که بود نمایش داده می‌شود
-      const jobs = candidates.map(name =>
-        fetch("data/" + encodeURIComponent(name) + ".json?t=" + Date.now(), { cache: "no-store" })
-          .then(res => (res.ok ? res.json() : null))
-          .then(data => ({ name: name, data: data }))
-          .catch(() => ({ name: name, data: null }))
-      );
-      return Promise.all(jobs);
-    })
-    .then(results => {
-      const obj = {};
-      let found = false;
-      results.forEach(({ name, data }) => {
-        if (data && Array.isArray(data.rows) && data.rows.length) {
-          obj[name] = data;
-          found = true;
-        }
-      });
-      if (found) { loadFromObject(obj, false); return; }
-      // داده‌ی مشترک نیست → پیش‌نمایش محلی مرورگر
-      const local = localStorage.getItem("mbf_sheets");
-      if (local) {
-        try {
-          if (loadFromObject(JSON.parse(local), true)) return;
-        } catch {}
-      }
+  /* ---------- شروع: خواندن شیت‌های شناخته‌شده از گوگل‌شیت ---------- */
+  (async () => {
+    if (SHEET_ID === "SHEET_ID_PLACEHOLDER") {
       emptyState.hidden = false;
-    })
-    .catch(() => {
-      const local = localStorage.getItem("mbf_sheets");
-      if (local) {
-        try {
-          if (loadFromObject(JSON.parse(local), true)) return;
-        } catch {}
-      }
-      emptyState.hidden = false;
+      emptyState.querySelector("strong").textContent = "شناسه‌ی گوگل‌شیت تنظیم نشده";
+      emptyState.querySelector("p").textContent = "مدیر باید شناسه‌ی شیت را در view.js وارد کند.";
+      return;
+    }
+
+    const results = await Promise.all(
+      KNOWN_SHEETS.map(name =>
+        fetchSheet(name)
+          .then(data => ({ name: name, data: data, ok: true }))
+          .catch(() => ({ name: name, data: null, ok: false }))
+      )
+    );
+
+    const obj = {};
+    results.forEach(r => {
+      if (r.ok && r.data.rows.length) obj[r.name] = r.data;
     });
+
+    if (loadFromObject(obj)) {
+      loadedAny = true;
+      return;
+    }
+
+    // هیچ شیتی خوانده نشد — احتمالاً شیت عمومی نیست یا شبکه به گوگل وصل نیست
+    const local = localStorage.getItem("mbf_sheets");
+    if (local) {
+      try {
+        if (loadFromObject(JSON.parse(local))) return;
+      } catch {}
+    }
+    emptyState.hidden = false;
+    emptyState.querySelector("strong").textContent = "اتصال به گوگل‌شیت برقرار نشد";
+    emptyState.querySelector("p").textContent = "برای دیدن داده‌ها به VPN نیاز است، یا شیت هنوز از طریق «Share → Anyone with the link» عمومی نشده است.";
+  })();
 })();

@@ -72,13 +72,13 @@
         <button class="btn publish" id="btn-publish" disabled>انتشار برای همه</button>
       </div>
       <p class="publish-hint" id="publish-info">
-        انتشار برای همه به توکن گیت‌هاب با دسترسی «Contents: Read and write» نیاز دارد — توکن فقط در مرورگر شما ذخیره می‌شود.
+        انتشار برای همه نیازمند آدرس سرویس Apps Script است (بخش تنظیمات مدیر) — این آدرس فقط در مرورگر شما ذخیره می‌شود. اتصال پایدار به گوگل (در ایران معمولاً VPN) لازم است.
       </p>
 
       <details class="token-box" id="token-box">
-        <summary>تنظیمات مدیر — توکن انتشار</summary>
+        <summary>تنظیمات مدیر — آدرس سرویس گوگل‌شیت</summary>
         <div class="token-inner">
-          <input type="password" id="token-input" class="token-input" placeholder="github_pat_…" aria-label="توکن گیت‌هاب">
+          <input type="password" id="token-input" class="token-input" placeholder="https://script.google.com/macros/s/…/exec" aria-label="آدرس سرویس Apps Script">
           <button class="btn small" id="token-save">ذخیره</button>
           <button class="btn small" id="token-test" type="button">تست توکن</button>
           <p class="token-status" id="token-status"></p>
