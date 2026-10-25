@@ -3,10 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>صفحه من</title>
+  <title>آپلود فایل اکسل | مدیریت فروش</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>سلام دنیا!</h1>
-  <p>این اولین صفحه من در گیت‌هاب است.</p>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand">مدیریت فروش</a>
+      <nav class="nav">
+        <a href="index.html" class="active">آپلود اکسل</a>
+        <a href="view.html">نمایش داده‌ها</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section">
+      <h1>فایل اکسل را آپلود کنید</h1>
+      <p class="hint">فرمت‌های مجاز: <strong>xlsx</strong>، <strong>xls</strong> و <strong>csv</strong> — حداکثر حجم پیشنهادی: ۵ مگابایت</p>
+
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="انتخاب فایل اکسل">
+        <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden>
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="dz-title">فایل را اینجا رها کنید</p>
+        <p class="dz-sub">یا <span class="link">روی این ناحیه کلیک کنید</span> تا از سیستم انتخاب کنید</p>
+      </div>
+
+      <div class="file-chip" id="file-chip" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linejoin="round"/>
+          <path d="M14 2v6h6" stroke-linejoin="round"/>
+        </svg>
+        <div class="chip-info">
+          <span class="chip-name" id="chip-name"></span>
+          <span class="chip-size" id="chip-size"></span>
+        </div>
+        <button class="chip-remove" id="chip-remove" aria-label="حذف فایل">×</button>
+      </div>
+
+      <div class="msg error" id="msg-error" hidden></div>
+      <div class="msg success" id="msg-success" hidden></div>
+
+      <button class="btn primary" id="btn-view" disabled>مشاهده‌ی داده‌ها ←</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">مدیریت فروش — داده‌ها فقط در مرورگر شما ذخیره می‌شوند</div>
+  </footer>
+
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
