@@ -11,10 +11,12 @@
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a href="index.html" class="brand">مدیریت فروش</a>
-      <nav class="nav">
-        <a href="index.html">آپلود اکسل</a>
+      <a href="view.html" class="brand">مدیریت فروش</a>
+      <nav class="nav" id="main-nav">
         <a href="view.html" class="active">نمایش داده‌ها</a>
+        <a href="index.html" id="nav-upload" hidden>آپلود اکسل</a>
+        <a href="admin.html" id="nav-admin" hidden>مدیریت کاربران</a>
+        <button class="logout-btn" id="btn-logout">خروج</button>
       </nav>
     </div>
   </header>
@@ -46,12 +48,12 @@
     <div id="empty-state" class="empty" hidden>
       <strong>هنوز داده‌ای منتشر نشده</strong>
       <p style="margin:0">داده‌ها از گوگل‌شیت خوانده می‌شوند؛ اگر باز نشد، اتصال به گوگل (VPN) یا اشتراک‌گذاری عمومی شیت را بررسی کنید.</p>
-      <a href="index.html" class="btn primary" style="display:inline-block; margin-top:16px; text-decoration:none">رفتن به صفحه‌ی آپلود ←</a>
+      <p style="margin-top:16px"><a href="login.html" class="btn primary" style="text-decoration:none; display:inline-block">رفتن به صفحه‌ی ورود ←</a></p>
     </div>
   </main>
 
   <footer class="site-footer">
-    <div class="container">مدیریت فروش — داده‌ی منتشرشده برای همه‌ی کاربران قابل مشاهده است</div>
+    <div class="container">مدیریت فروش — دسترسی به داده‌ها فقط برای کاربران واردشده</div>
   </footer>
 
   <script src="view.js"></script>

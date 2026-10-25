@@ -1,9 +1,13 @@
 // Service Worker — کش کامل برای کارکرد آفلاین (اینترنت ملی)
-const CACHE = "mbf-v7";
+const CACHE = "mbf-v9";
 const ASSETS = [
   "./",
   "./index.html",
   "./view.html",
+  "./login.html",
+  "./login.js",
+  "./admin.html",
+  "./admin.js",
   "./style.css",
   "./app.js",
   "./view.js",

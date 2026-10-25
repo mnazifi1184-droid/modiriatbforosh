@@ -1,5 +1,30 @@
 // منطق صفحه‌ی نمایش — خواندن مستقیم از گوگل‌شیت (endpoint gviz)
 (function () {
+  // ---------- نگهبانی: بدون ورود، دسترسی نیست ----------
+  const SESSION_KEY = "mbf_session";
+  const USER_KEY = "mbf_user";
+  const sessionKey = localStorage.getItem(SESSION_KEY);
+  let currentUser = null;
+  try { currentUser = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
+  if (!sessionKey || !currentUser) { location.href = "login.html"; return; }
+  if (!currentUser.isAdmin && !currentUser.permView) {
+    // اجازه‌ی مشاهده ندارد — به صفحه‌ی مجاز خودش بفرست
+    location.href = currentUser.permUpload ? "index.html" : "login.html";
+    return;
+  }
+
+  // ناوبری بر اساس دسترسی
+  const navUpload = document.getElementById("nav-upload");
+  if (navUpload && (currentUser.isAdmin || currentUser.permUpload)) navUpload.hidden = false;
+  const navAdmin = document.getElementById("nav-admin");
+  if (navAdmin && currentUser.isAdmin) navAdmin.hidden = false;
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(USER_KEY);
+    location.href = "login.html";
+  });
+
   const content = document.getElementById("content");
   const emptyState = document.getElementById("empty-state");
   const fileName = document.getElementById("file-name");

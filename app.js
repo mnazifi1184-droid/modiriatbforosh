@@ -1,6 +1,27 @@
 // منطق صفحه‌ی آپلود — انتشار مستقیم به گوگل‌شیت از طریق Apps Script
 (function () {
   const SERVICE_KEY = "mbf_script_url"; // آدرس سرویس Apps Script فقط در مرورگر مدیر
+  const USER_KEY = "mbf_user";
+  const SESSION_KEY = "mbf_session";
+
+  // ---------- نگهبانی: بدون ورود، دسترسی نیست ----------
+  const sessionKey = localStorage.getItem(SESSION_KEY);
+  let currentUser = null;
+  try { currentUser = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
+  if (!sessionKey || !currentUser) { location.href = "login.html"; return; }
+  if (!currentUser.isAdmin && !currentUser.permUpload) { location.href = "view.html"; return; }
+
+  // ناوبری بر اساس دسترسی
+  const navAdmin = document.getElementById("nav-admin");
+  if (navAdmin && currentUser.isAdmin) navAdmin.hidden = false;
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(USER_KEY);
+    location.href = "login.html";
+  });
+
+  // آدرس سرویس فقط برای مدیر قابل ویرایش است
 
   const KNOWN_SHEETS = ["Products", "Barcod", "Pak", "Omr", "Endmonth"];
 
@@ -262,7 +283,7 @@
       // Content-Type ساده تا درخواست preflight (OPTIONS) راه نیفتد —
       // Apps Script درخواست preflight را جواب نمی‌دهد
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(Object.assign({ sessionKey: sessionKey }, payload))
     });
     if (!res.ok) throw new Error("http " + res.status);
     const j = await res.json();

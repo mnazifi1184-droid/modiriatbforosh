@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدیریت کاربران — مدیریت فروش</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M3 10h18M9 4v16"/>
+        </svg>
+        مدیریت فروش
+      </a>
+      <nav class="header-nav">
+        <a href="view.html">نمایش داده‌ها</a>
+        <a href="admin.html" class="active">مدیریت کاربران</a>
+        <a href="index.html">آپلود اکسل</a>
+        <button class="logout-btn" id="btn-logout">خروج</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="upload-section">
+      <h1>مدیریت کاربران</h1>
+      <p class="hint">هر کاربر می‌تواند با دسترسی «مشاهده» صفحات نمایش را ببیند، با «درج داده» فایل اکسل منتشر کند، و مدیر علاوه بر این‌ها صفحه‌ی مدیریت کاربران را دارد.</p>
+
+      <div class="actions-row" style="justify-content:flex-start">
+        <button class="btn primary" id="btn-new-user">+ کاربر جدید</button>
+        <button class="btn" id="btn-reload">به‌روزرسانی فهرست</button>
+      </div>
+
+      <div class="msg error" id="admin-error" hidden></div>
+      <div class="msg success" id="admin-success" hidden></div>
+
+      <div class="table-wrap mapping-wrap">
+        <table class="mapping-table users-table">
+          <thead>
+            <tr>
+              <th>نام کاربری</th>
+              <th>نام نمایشی</th>
+              <th>مدیر</th>
+              <th>مشاهده</th>
+              <th>درج داده</th>
+              <th>فعال</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody id="users-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- فرم کاربر -->
+    <div class="modal-backdrop" id="user-modal" hidden>
+      <div class="modal">
+        <h2 id="user-modal-title">کاربر جدید</h2>
+        <form id="user-form">
+          <label class="field">
+            <span>نام کاربری (انگلیسی، بدون فاصله)</span>
+            <input type="text" id="u-username" dir="ltr" required>
+          </label>
+          <label class="field">
+            <span>نام نمایشی</span>
+            <input type="text" id="u-displayname">
+          </label>
+          <label class="field" id="u-password-field">
+            <span>رمز عبور <small id="u-password-hint">(برای کاربر جدید الزامی)</small></span>
+            <input type="password" id="u-password" autocomplete="new-password">
+          </label>
+
+          <fieldset class="perm-group">
+            <legend>دسترسی‌ها</legend>
+            <label class="check"><input type="checkbox" id="u-admin"> مدیر سیستم (دسترسی به همه‌چیز + مدیریت کاربران)</label>
+            <label class="check"><input type="checkbox" id="u-view"> مشاهده‌ی صفحات نمایش</label>
+            <label class="check"><input type="checkbox" id="u-upload"> درج داده (آپلود و انتشار اکسل)</label>
+            <label class="check"><input type="checkbox" id="u-active" checked> حساب فعال</label>
+          </fieldset>
+
+          <div class="msg error" id="user-form-error" hidden></div>
+
+          <div class="actions-row modal-actions">
+            <button type="submit" class="btn primary">ذخیره</button>
+            <button type="button" class="btn" id="user-modal-close">انصراف</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="admin.js"></script>
+</body>
+</html>
