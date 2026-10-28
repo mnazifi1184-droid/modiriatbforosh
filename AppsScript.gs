@@ -232,20 +232,22 @@ function getAppDb_(appId) {
   const name = 'MBF_DB_' + String(appId).replace(/[^\w-]/g, '');
   if (!name || name === 'MBF_DB_') throw new Error('برنامه نامعتبر است.');
 
+  // شناسه‌ی فایل دیتابیس در ScriptProperties نگه داشته می‌شود — بدون نیاز به مجوز Drive
+  const props = PropertiesService.getScriptProperties();
   const cache = CacheService.getScriptCache();
-  const cachedId = cache.get('appdb_' + appId);
-  if (cachedId) {
-    try { return SpreadsheetApp.openById(cachedId); } catch (e) { /* کش کهنه — دوباره می‌سازیم */ }
-  }
 
-  const files = DriveApp.getFilesByName(name);
-  if (files.hasNext()) {
-    const ss = SpreadsheetApp.openById(files.next().getId());
-    cache.put('appdb_' + appId, ss.getId(), 21600);
-    return ss;
+  const cachedId = cache.get('appdb_' + appId) || props.getProperty('appdb_' + appId);
+  if (cachedId) {
+    try {
+      const ss = SpreadsheetApp.openById(cachedId);
+      cache.put('appdb_' + appId, ss.getId(), 21600);
+      return ss;
+    } catch (e) { /* فایل حذف شده — دوباره می‌سازیم */ }
   }
 
   const ss = SpreadsheetApp.create(name);
+  props.setProperty('appdb_' + appId, ss.getId());
+  cache.put('appdb_' + appId, ss.getId(), 21600);
   const info = ss.getSheets()[0];
   info.setName('info');
   info.getRange('A1:B3').setValues([
@@ -253,7 +255,6 @@ function getAppDb_(appId) {
     ['created', new Date().toISOString()],
     ['note', 'دیتابیس اختصاصی این برنامه — خودکار ساخته شده']
   ]);
-  cache.put('appdb_' + appId, ss.getId(), 21600);
   return ss;
 }
 
