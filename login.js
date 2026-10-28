@@ -26,8 +26,8 @@
     return "view.html";
   }
 
-  // آدرس سرویس: از localStorage یا از query string (?service=…)
-  let serviceUrl = localStorage.getItem(SERVICE_KEY) || "";
+  // آدرس سرویس: تنظیم مدیر > پیش‌فرض config.js — یا از query string (?service=…)
+  let serviceUrl = (window.mbfServiceUrl ? window.mbfServiceUrl() : localStorage.getItem(SERVICE_KEY)) || "";
   const qs = new URLSearchParams(location.search);
   if (qs.get("service")) {
     serviceUrl = qs.get("service");

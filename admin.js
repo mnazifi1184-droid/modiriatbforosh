@@ -23,7 +23,7 @@
   const appsPermList = document.getElementById("apps-perm-list");
   const appsPermGroup = document.getElementById("apps-perm-group");
 
-  let serviceUrl = localStorage.getItem(SERVICE_KEY) || "";
+  let serviceUrl = (window.mbfServiceUrl ? window.mbfServiceUrl() : localStorage.getItem(SERVICE_KEY)) || "";
   let editingUser = null; // null = ایجاد، رشته = ویرایش
 
   // ---------- UI دسترسی برنامه‌ها ----------

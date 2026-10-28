@@ -55,10 +55,13 @@
   let inProgress = false;
 
   // ---------- آدرس سرویس ----------
-  const savedUrl = localStorage.getItem(SERVICE_KEY);
+  const savedUrl = (window.mbfServiceUrl ? window.mbfServiceUrl() : "") || "";
+  const locallySaved = !!localStorage.getItem(SERVICE_KEY);
   if (savedUrl) {
     tokenInput.value = savedUrl;
-    tokenStatus.textContent = "✓ آدرس سرویس ذخیره شده — می‌توانید انتشار بدهید";
+    tokenStatus.textContent = locallySaved
+      ? "✓ آدرس سرویس ذخیره شده — می‌توانید انتشار بدهید"
+      : "✓ آدرس سرویس پیش‌فرض فعال است — می‌توانید انتشار بدهید";
     tokenStatus.style.color = "var(--accent-dark)";
     publishInfo.hidden = true;
   }
