@@ -67,6 +67,9 @@ function doPost(e) {
       case 'readDataRows':
         return respond_(readDataRows(payload));
 
+      case 'expandSplitColumn':
+        return respond_(expandSplitColumn(payload));
+
       case 'import': {
         const sess = getSession_(payload.sessionKey);
         if (!sess || !(sess.isAdmin || sess.permUpload)) {
@@ -291,6 +294,112 @@ function readDataRows(payload) {
   const columns = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
   const all = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
   return { success: true, columns: columns, rows: all.slice(-500), total: all.length, database: ss.getName() };
+}
+
+/* ------------------------------------------------------------
+ * گسترش کدهای چندگانه — مثل SPLIT/FLATTEN اکسل
+ * اگر داخل سلولِ یک ستون چند کد باشد (مثل «860970-P13/ 860963-420/ 860962-P13/»)
+ * به ازای هر کد یک ردیف جدا در شیت خروجی ساخته می‌شود و بقیه‌ی
+ * ستون‌های همان ردیف عیناً کنارش کپی می‌گردد.
+ * payload: { sessionKey, appId, dataset, splitColumn?, outputSheet? }
+ * ------------------------------------------------------------ */
+function splitCodes_(cell) {
+  const s = String(cell == null ? '' : cell).trim();
+  if (!s) return [];
+  let parts;
+  if (s.indexOf('/') !== -1) parts = s.split('/');
+  else if (s.indexOf(',') !== -1) parts = s.split(',');
+  else parts = s.split(/\s+/);
+  const out = [];
+  parts.forEach(function (p) {
+    const t = String(p).trim().replace(/\s+/g, ' ');
+    if (t !== '') out.push(t);
+  });
+  return out;
+}
+
+function writeRowsChunked_(sheet, startRow, rows, width) {
+  const CH = 5000;
+  for (let i = 0; i < rows.length; i += CH) {
+    const n = Math.min(CH, rows.length - i);
+    sheet.getRange(startRow + i, 1, n, width).setValues(rows.slice(i, i + n));
+  }
+}
+
+function expandSplitColumn(payload) {
+  const sess = getSession_(payload && payload.sessionKey);
+  if (!sess) return { success: false, error: 'نشست منقضی شده — دوباره وارد شوید.' };
+
+  const appId = String((payload && payload.appId) || '');
+  if (!hasAppAccess_(sess, appId)) return { success: false, error: 'دسترسی به این برنامه را ندارید.' };
+
+  const dataset = String((payload && payload.dataset) || '').replace(/[^\w-]/g, '');
+  if (!dataset) return { success: false, error: 'نام دیتاست نامعتبر است.' };
+
+  const ss = getAppDb_(appId);
+  const sheet = ss.getSheetByName(dataset);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { success: false, error: 'در «' + dataset + '» داده‌ای نیست — اول فایل را ذخیره کنید.' };
+  }
+
+  const lastCol = sheet.getLastColumn();
+  const hdr = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+
+  const splitColumn = String((payload && payload.splitColumn) || '').trim() ||
+    'کد محصول فروشنده';
+  const srcIdx = hdr.indexOf(splitColumn);
+  if (srcIdx === -1) {
+    return { success: false, error: 'ستون «' + splitColumn + '» در داده پیدا نشد. ستون‌های موجود: ' + hdr.filter(function (h) { return h && h !== UPSERT_STAMP_COL; }).join(' | ') };
+  }
+
+  const outName = String((payload && payload.outputSheet) || '').replace(/[^\w-]/g, '') ||
+    (dataset + '_split');
+  if (outName === dataset) return { success: false, error: 'نام شیت خروجی باید با شیت اصلی فرق کند.' };
+
+  const stampIdx = hdr.indexOf(UPSERT_STAMP_COL);
+  const all = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+
+  const out = [];
+  let inputRows = 0, noCode = 0, maxCodes = 0;
+  all.forEach(function (r) {
+    if (hdr.length && String(r.join('\u0000')) === '') return;
+    inputRows++;
+    const codes = splitCodes_(r[srcIdx]);
+    if (!codes.length) { noCode++; out.push(r.slice()); return; }
+    if (codes.length > maxCodes) maxCodes = codes.length;
+    codes.forEach(function (code) {
+      const nr = r.slice();
+      nr[srcIdx] = code;
+      if (stampIdx !== -1) nr[stampIdx] = Utilities.formatDate(new Date(), 'Asia/Tehran', 'yyyy-MM-dd HH:mm:ss');
+      out.push(nr);
+    });
+  });
+
+  if (!out.length) return { success: false, error: 'ردیف قابل گسترش پیدا نشد.' };
+
+  let outSheet = ss.getSheetByName(outName);
+  if (!outSheet) {
+    outSheet = ss.insertSheet(outName);
+    outSheet.setFrozenRows(1);
+    outSheet.getRange(1, 1, 1, hdr.length).setValues([hdr]);
+  }
+  /* هدر شیت خروجی هم با هدر اصلی همگام می‌ماند */
+  outSheet.getRange(1, 1, 1, hdr.length).setValues([hdr]);
+  if (outSheet.getLastRow() > 1) {
+    outSheet.getRange(2, 1, outSheet.getLastRow() - 1, outSheet.getLastColumn()).clearContent();
+  }
+  writeRowsChunked_(outSheet, 2, out, hdr.length);
+
+  return {
+    success: true,
+    outputSheet: outName,
+    inputRows: inputRows,
+    outputRows: out.length,
+    rowsWithoutCode: noCode,
+    maxCodesPerRow: maxCodes,
+    splitColumn: splitColumn,
+    database: ss.getName()
+  };
 }
 
 /* ------------------------------------------------------------

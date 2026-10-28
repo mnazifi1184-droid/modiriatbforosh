@@ -43,6 +43,7 @@
   const storedWrap = document.getElementById("stored-wrap");
   const storedTable = document.getElementById("stored-table");
   const btnRefresh = document.getElementById("btn-refresh");
+  const btnExpand = document.getElementById("btn-expand");
 
   let currentDataset = null;
   let workbook = null;
@@ -261,12 +262,39 @@
       ).join("");
       storedMeta.textContent = "۵۰ ردیف اخیر از " + Number(j.total).toLocaleString("fa-IR") + " ردیف — دیتابیس: " + j.database;
       storedWrap.hidden = false;
+      btnExpand.hidden = currentDataset !== "dk-reports";
     } catch (err) {
       storedMeta.textContent = "بارگیری نشد: " + (err && err.message);
     }
   }
 
   btnRefresh.addEventListener("click", loadStored);
+
+  // ---------- گسترش کدهای چندگانه (مثل SPLIT/FLATTEN اکسل) ----------
+  btnExpand.addEventListener("click", async () => {
+    hideMsgs();
+    if (!confirm("به ازای هر کد داخل ستون «کد محصول فروشنده» یک ردیف جدا ساخته می‌شود و نتیجه در شیت dk-reports_split ذخیره می‌شود. ادامه می‌دهید؟")) return;
+    btnExpand.disabled = true;
+    btnExpand.textContent = "در حال گسترش…";
+    try {
+      const j = await callService({
+        action: "expandSplitColumn",
+        sessionKey: sessionKey,
+        appId: APP_ID,
+        dataset: currentDataset
+      });
+      showMsg(msgSuccess, "✓ گسترش انجام شد — ردیف ورودی: " + j.inputRows +
+        " → خروجی: " + j.outputRows +
+        " (حداکثر " + j.maxCodesPerRow + " کد در یک ردیف)" +
+        (j.rowsWithoutCode ? " | بدون کد: " + j.rowsWithoutCode : "") +
+        " — نتیجه در شیت «" + j.outputSheet + "» دیتابیس " + j.database);
+    } catch (err) {
+      showMsg(msgError, String(err && err.message));
+    } finally {
+      btnExpand.disabled = false;
+      btnExpand.textContent = "⤵ گسترش کدها (SPLIT)";
+    }
+  });
 
   // ---------- شروع ----------
   switchTab(myDatasets[0].id);
