@@ -597,3 +597,16 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
 }
 .check.sub { font-size: .82rem; color: #374151; }
 .apps-cell { display: flex; flex-wrap: wrap; gap: .25rem; max-width: 260px; }
+
+/* ---------- تب‌های دیتاست (صفحه‌ی برنامه‌ها) ---------- */
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.tab {
+  border: 1px solid #d7dee6; background: #fff; color: var(--text);
+  padding: 10px 16px; border-radius: 10px; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700;
+}
+.tab:hover { background: var(--bg); }
+.tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.key-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.key-row label { font-size: 14px; font-weight: 700; color: var(--muted); }
+.key-row select { max-width: 240px; }

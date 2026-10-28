@@ -11,10 +11,9 @@ const APPS = [
     icon: "🛒",
     color: "#e63757",
     sections: [
-      { id: "orders",   title: "سفارش‌ها" },
-      { id: "payments", title: "تسویه و کیف پول" },
-      { id: "returns",  title: "مرجوعی‌ها" },
-      { id: "reports",  title: "گزارش‌ها" }
+      { id: "stock-ikco",  title: "موجودی ایرانخودرو" },
+      { id: "stock-saipa", title: "موجودی سایپا" },
+      { id: "dk-reports",  title: "گزارش دیجی کالا" }
     ]
   },
   {

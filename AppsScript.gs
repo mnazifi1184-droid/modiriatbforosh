@@ -61,6 +61,12 @@ function doPost(e) {
       case 'changePassword':
         return respond_(changePassword(payload));
 
+      case 'upsertDataRows':
+        return respond_(upsertDataRows(payload));
+
+      case 'readDataRows':
+        return respond_(readDataRows(payload));
+
       case 'import': {
         const sess = getSession_(payload.sessionKey);
         if (!sess || !(sess.isAdmin || sess.permUpload)) {
@@ -139,10 +145,9 @@ function parseAppsPerm_(raw) {
 var APPS = [
   { id: 'digikala', title: 'دیجی کالا',
     sections: [
-      { id: 'orders',   title: 'سفارش‌ها' },
-      { id: 'payments', title: 'تسویه و کیف پول' },
-      { id: 'returns',  title: 'مرجوعی‌ها' },
-      { id: 'reports',  title: 'گزارش‌ها' }
+      { id: 'stock-ikco',  title: 'موجودی ایرانخودرو' },
+      { id: 'stock-saipa', title: 'موجودی سایپا' },
+      { id: 'dk-reports',  title: 'گزارش دیجی کالا' }
     ]
   },
   { id: 'arpa', title: 'ثبت فاکتور در آرپا',
@@ -216,6 +221,165 @@ function findUser_(username) {
     }
   }
   return null;
+}
+
+/* ============================================================
+ * دیتابیس جداگانه‌ی هر برنامه — یک فایل گوگل‌شیت مستقل در Drive
+ * نام فایل‌ها: MBF_DB_digikala / MBF_DB_arpa / MBF_DB_daghi
+ * دفعه‌ی اول که داده‌ای ذخیره شود، خودکار ساخته می‌شود.
+ * ============================================================ */
+function getAppDb_(appId) {
+  const name = 'MBF_DB_' + String(appId).replace(/[^\w-]/g, '');
+  if (!name || name === 'MBF_DB_') throw new Error('برنامه نامعتبر است.');
+
+  const cache = CacheService.getScriptCache();
+  const cachedId = cache.get('appdb_' + appId);
+  if (cachedId) {
+    try { return SpreadsheetApp.openById(cachedId); } catch (e) { /* کش کهنه — دوباره می‌سازیم */ }
+  }
+
+  const files = DriveApp.getFilesByName(name);
+  if (files.hasNext()) {
+    const ss = SpreadsheetApp.openById(files.next().getId());
+    cache.put('appdb_' + appId, ss.getId(), 21600);
+    return ss;
+  }
+
+  const ss = SpreadsheetApp.create(name);
+  const info = ss.getSheets()[0];
+  info.setName('info');
+  info.getRange('A1:B3').setValues([
+    ['app', appId],
+    ['created', new Date().toISOString()],
+    ['note', 'دیتابیس اختصاصی این برنامه — خودکار ساخته شده']
+  ]);
+  cache.put('appdb_' + appId, ss.getId(), 21600);
+  return ss;
+}
+
+function hasAppAccess_(sess, appId) {
+  if (!sess) return false;
+  if (sess.isAdmin) return true;
+  const p = sess.appsPerm;
+  if (p === 'all') return true;
+  if (p && typeof p === 'object' && p.apps && p.apps[appId]) {
+    return p.apps[appId].access === true;
+  }
+  return false;
+}
+
+/* ------------------------------------------------------------
+ * خواندن داده‌ی دیتاست برنامه (آخرین ۵۰۰ ردیف)
+ * ------------------------------------------------------------ */
+function readDataRows(payload) {
+  const sess = getSession_(payload && payload.sessionKey);
+  if (!sess) return { success: false, error: 'نشست منقضی شده — دوباره وارد شوید.' };
+
+  const appId = String((payload && payload.appId) || '');
+  if (!hasAppAccess_(sess, appId)) return { success: false, error: 'دسترسی به این برنامه را ندارید.' };
+
+  const dataset = String((payload && payload.dataset) || '').replace(/[^\w-]/g, '');
+  if (!dataset) return { success: false, error: 'نام دیتاست نامعتبر است.' };
+
+  const ss = getAppDb_(appId);
+  const sheet = ss.getSheetByName(dataset);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { success: true, columns: [], rows: [], total: 0, database: ss.getName() };
+  }
+  const lastCol = sheet.getLastColumn();
+  const columns = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+  const all = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
+  return { success: true, columns: columns, rows: all.slice(-500), total: all.length, database: ss.getName() };
+}
+
+/* ------------------------------------------------------------
+ * ذخیره‌ی داده در دیتابیس برنامه (درج/به‌روزرسانی با کلید)
+ * payload: { sessionKey, appId, dataset, columns[], keyColumn, rows[][] }
+ * اگر مقدار ستون کلید از قبل باشد، ردیف به‌روز می‌شود؛ وگرنه اضافه.
+ * ------------------------------------------------------------ */
+const UPSERT_STAMP_COL = '__updated_at';
+function upsertDataRows(payload) {
+  const sess = getSession_(payload && payload.sessionKey);
+  if (!sess) return { success: false, error: 'نشست منقضی شده — دوباره وارد شوید.' };
+
+  const appId = String((payload && payload.appId) || '');
+  if (!hasAppAccess_(sess, appId)) {
+    return { success: false, error: 'دسترسی به این برنامه را ندارید.' };
+  }
+
+  const dataset = String((payload && payload.dataset) || '').replace(/[^\w-]/g, '');
+  if (!dataset) return { success: false, error: 'نام دیتاست نامعتبر است.' };
+
+  const columns = ((payload && payload.columns) || []).map(String);
+  const rows = (payload && payload.rows) || [];
+  const keyColumn = String((payload && payload.keyColumn) || '');
+
+  if (!columns.length) return { success: false, error: 'فهرست ستون‌ها خالی است.' };
+  if (!rows.length) return { success: false, error: 'داده‌ای برای ذخیره نیست.' };
+  if (!keyColumn || columns.indexOf(keyColumn) === -1) {
+    return { success: false, error: 'ستون کلید انتخاب نشده یا معتبر نیست.' };
+  }
+
+  const ss = getAppDb_(appId);
+  let sheet = ss.getSheetByName(dataset);
+  if (!sheet) {
+    sheet = ss.insertSheet(dataset);
+    sheet.appendRow(columns.concat([UPSERT_STAMP_COL]));
+    sheet.setFrozenRows(1);
+  }
+
+  /* همگام‌سازی هدرها — ستون‌های تازه به انتها اضافه می‌شوند */
+  let hdr = sheet.getLastColumn()
+    ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String)
+    : [];
+  columns.forEach(function (col) {
+    if (hdr.indexOf(col) === -1) { hdr.push(col); sheet.getRange(1, hdr.length).setValue(col); }
+  });
+  if (hdr.indexOf(UPSERT_STAMP_COL) === -1) {
+    hdr.push(UPSERT_STAMP_COL);
+    sheet.getRange(1, hdr.length).setValue(UPSERT_STAMP_COL);
+  }
+
+  const keyIdx = hdr.indexOf(keyColumn);
+  const stampIdx = hdr.indexOf(UPSERT_STAMP_COL);
+  const now = Utilities.formatDate(new Date(), 'Asia/Tehran', 'yyyy-MM-dd HH:mm:ss');
+
+  const lastRow = sheet.getLastRow();
+  const existing = lastRow > 1
+    ? sheet.getRange(2, 1, lastRow - 1, hdr.length).getValues()
+    : [];
+
+  const index = {};
+  existing.forEach(function (r, i) {
+    const k = String(r[keyIdx]);
+    if (k !== '') index[k] = i;
+  });
+
+  let inserted = 0, updated = 0, skipped = 0;
+  rows.forEach(function (row) {
+    const obj = {};
+    columns.forEach(function (col, i) { obj[col] = row[i] !== undefined ? row[i] : ''; });
+    const k = String(obj[keyColumn]);
+    if (k === '') { skipped++; return; }
+    const out = hdr.map(function (h) { return obj[h] !== undefined ? obj[h] : ''; });
+    out[stampIdx] = now;
+    const at = index[k];
+    if (at !== undefined) { existing[at] = out; updated++; }
+    else { index[k] = existing.length; existing.push(out); inserted++; }
+  });
+
+  if (existing.length) {
+    sheet.getRange(2, 1, existing.length, hdr.length).setValues(existing);
+  }
+
+  return {
+    success: true,
+    inserted: inserted,
+    updated: updated,
+    skipped: skipped,
+    total: existing.length,
+    database: ss.getName()
+  };
 }
 
 /* ============================================================

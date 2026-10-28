@@ -1,5 +1,5 @@
 // Service Worker — کش کامل برای کارکرد آفلاین (اینترنت ملی)
-const CACHE = "mbf-v12";
+const CACHE = "mbf-v13";
 const ASSETS = [
   "./",
   "./dashboard.html",
@@ -16,6 +16,8 @@ const ASSETS = [
   "./admin.html",
   "./admin.js",
   "./apps-config.js",
+  "./digikala.html",
+  "./digikala.js",
   "./style.css",
   "./manifest.json",
   "./icon.svg",

@@ -60,8 +60,13 @@
       "</a>"
     ).join("");
 
-  // ---------- فعلاً صفحه‌ی در دست ساخت ----------
+  // برنامه‌هایی که صفحه‌ی اختصاصی دارند — شاخه‌ها مستقیم به صفحه‌ی برنامه لینک می‌شوند
+  const READY_APPS = ["digikala"];
   document.querySelectorAll("#section-tiles .tile").forEach(el => {
+    if (READY_APPS.indexOf(app.id) !== -1) {
+      el.setAttribute("href", app.id + ".html");
+      return;
+    }
     el.addEventListener("click", e => {
       e.preventDefault();
       const secId = el.dataset.sec;
