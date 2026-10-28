@@ -170,9 +170,21 @@ function getUsersSheet_() {
     sheet.appendRow(['username', 'passwordHash', 'displayName', 'isAdmin', 'permView', 'permUpload', 'appsPermJson', 'active']);
     sheet.setFrozenRows(1);
   }
-  /* اولین کاربر: admin پیش‌فرض */
+
+  /* ارتقای خودکار شیت‌های قدیمی ۷ ستونی:
+     اگر ستون appsPermJson وجود ندارد ولی active هست، یک ستون قبل از active
+     اضافه می‌شود تا active به جای درست (ستون ۸) برود و داده‌ها دست نخورده بمانند */
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const hdr = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+  if (hdr.indexOf('appsPermJson') === -1 && hdr.indexOf('active') !== -1) {
+    const activeCol = hdr.indexOf('active') + 1;
+    sheet.insertColumns(activeCol);
+    sheet.getRange(1, activeCol).setValue('appsPermJson');
+  }
+
+  /* اولین کاربر: admin پیش‌فرض (هر ۸ ستون) */
   if (sheet.getLastRow() < 2) {
-    sheet.appendRow(['admin', hashPassword_('12345678'), 'مدیر سیستم', 'yes', 'yes', 'yes', 'yes']);
+    sheet.appendRow(['admin', hashPassword_('12345678'), 'مدیر سیستم', 'yes', 'yes', 'yes', 'yes', 'yes']);
   }
   return sheet;
 }
