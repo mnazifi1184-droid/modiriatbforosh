@@ -1,16 +1,21 @@
 // Service Worker — کش کامل برای کارکرد آفلاین (اینترنت ملی)
-const CACHE = "mbf-v10";
+const CACHE = "mbf-v11";
 const ASSETS = [
   "./",
-  "./index.html",
+  "./dashboard.html",
+  "./dashboard.js",
+  "./app.html",
+  "./app.js",
+  "./upload.html",
+  "./upload.js",
   "./view.html",
+  "./view.js",
   "./login.html",
   "./login.js",
   "./admin.html",
   "./admin.js",
+  "./apps-config.js",
   "./style.css",
-  "./app.js",
-  "./view.js",
   "./manifest.json",
   "./icon.svg",
   "./files/sample.xlsx",
@@ -50,7 +55,7 @@ self.addEventListener("fetch", e => {
         return res;
       }).catch(() => {
         // صفحه‌ی ناوبری آفلاین: اگر صفحه خواسته شده، از کش بده
-        if (e.request.mode === "navigate") return caches.match("./index.html");
+        if (e.request.mode === "navigate") return caches.match("./dashboard.html");
       });
     })
   );

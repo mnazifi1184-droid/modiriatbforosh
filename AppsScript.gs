@@ -103,16 +103,71 @@ function hashPassword_(pw) {
 }
 
 /* ============================================================
+ * دسترسی برنامه‌محور
+ * ============================================================ */
+function normalizeAppsPerm_(appsPerm) {
+  if (appsPerm === 'all') return 'yes';
+  if (!appsPerm || typeof appsPerm !== 'object') return '';
+  try {
+    return JSON.stringify(appsPerm);
+  } catch (e) {
+    return '';
+  }
+}
+
+function parseAppsPerm_(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return { apps: {} };
+  if (s === 'yes' || s === 'all') return 'all';
+  try {
+    const o = JSON.parse(s);
+    return (o && typeof o === 'object' && o.apps) ? o : { apps: {} };
+  } catch (e) {
+    return { apps: {} };
+  }
+}
+
+/* ============================================================
  * شیت کاربران
  * ستون‌ها: username | passwordHash | displayName | isAdmin |
- *          permView | permUpload | active
+ *          permView | permUpload | appsPermJson | active
+ * appsPermJson: دسترسی برنامه‌محور —
+ *   {"apps":{"digikala":{"access":true,"sections":{"orders":true,...}},...}}
  * ============================================================ */
+
+/* فهرست برنامه‌ها و شاخه‌ها — باید با apps-config.js سمت سایت هماهنگ بماند */
+var APPS = [
+  { id: 'digikala', title: 'دیجی کالا',
+    sections: [
+      { id: 'orders',   title: 'سفارش‌ها' },
+      { id: 'payments', title: 'تسویه و کیف پول' },
+      { id: 'returns',  title: 'مرجوعی‌ها' },
+      { id: 'reports',  title: 'گزارش‌ها' }
+    ]
+  },
+  { id: 'arpa', title: 'ثبت فاکتور در آرپا',
+    sections: [
+      { id: 'new-invoice', title: 'ثبت فاکتور جدید' },
+      { id: 'invoices',    title: 'فهرست فاکتورها' },
+      { id: 'customers',   title: 'مشتریان' },
+      { id: 'reports',     title: 'گزارش‌ها' }
+    ]
+  },
+  { id: 'daghi', title: 'جمع‌آوری داغی',
+    sections: [
+      { id: 'collect', title: 'ثبت جمع‌آوری' },
+      { id: 'list',    title: 'فهرست داغی' },
+      { id: 'returns', title: 'مرجوعی‌ها' },
+      { id: 'reports', title: 'گزارش‌ها' }
+    ]
+  }
+];
 function getUsersSheet_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(USERS_SHEET);
   if (!sheet) {
     sheet = ss.insertSheet(USERS_SHEET);
-    sheet.appendRow(['username', 'passwordHash', 'displayName', 'isAdmin', 'permView', 'permUpload', 'active']);
+    sheet.appendRow(['username', 'passwordHash', 'displayName', 'isAdmin', 'permView', 'permUpload', 'appsPermJson', 'active']);
     sheet.setFrozenRows(1);
   }
   /* اولین کاربر: admin پیش‌فرض */
@@ -133,10 +188,11 @@ function listUsers_() {
       isAdmin: String(values[r][3]) === 'yes',
       permView: String(values[r][4]) === 'yes',
       permUpload: String(values[r][5]) === 'yes',
-      active: String(values[r][6]) === 'yes'
+      active: String(values[r][7]) === 'yes',
+      appsPerm: parseAppsPerm_(values[r][6])
     });
   }
-  return { success: true, users: users };
+  return { success: true, users: users, apps: APPS };
 }
 
 function findUser_(username) {
@@ -144,7 +200,7 @@ function findUser_(username) {
   const values = sheet.getDataRange().getValues();
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][0]) === String(username)) {
-      return { row: r + 1, hash: String(values[r][1]), active: String(values[r][6]) === 'yes' };
+      return { row: r + 1, hash: String(values[r][1]), active: String(values[r][7]) === 'yes' };
     }
   }
   return null;
@@ -179,14 +235,15 @@ function login(payload) {
   }
 
   const sheet = getUsersSheet_();
-  const row = sheet.getRange(found.row, 1, 1, 7).getValues()[0];
+  const row = sheet.getRange(found.row, 1, 1, 8).getValues()[0];
 
   const user = {
     username: String(row[0]),
     displayName: String(row[2]),
     isAdmin: String(row[3]) === 'yes',
     permView: String(row[4]) === 'yes',
-    permUpload: String(row[5]) === 'yes'
+    permUpload: String(row[5]) === 'yes',
+    appsPerm: String(row[3]) === 'yes' ? 'all' : parseAppsPerm_(row[6])
   };
 
   const token = Utilities.getUuid();
@@ -230,7 +287,8 @@ function saveUser(payload) {
     sheet.getRange(found.row, 4).setValue(u.isAdmin ? 'yes' : 'no');
     sheet.getRange(found.row, 5).setValue(u.permView ? 'yes' : 'no');
     sheet.getRange(found.row, 6).setValue(u.permUpload ? 'yes' : 'no');
-    sheet.getRange(found.row, 7).setValue(u.active === false ? 'no' : 'yes');
+    sheet.getRange(found.row, 7).setValue(u.isAdmin ? 'yes' : normalizeAppsPerm_(u.appsPerm));
+    sheet.getRange(found.row, 8).setValue(u.active === false ? 'no' : 'yes');
     if (u.password) {
       if (String(u.password).length < 6) throw new Error('رمز باید حداقل ۶ کاراکتر باشد.');
       sheet.getRange(found.row, 2).setValue(hashPassword_(u.password));
@@ -248,6 +306,7 @@ function saveUser(payload) {
     u.isAdmin ? 'yes' : 'no',
     u.permView ? 'yes' : 'no',
     u.permUpload ? 'yes' : 'no',
+    u.isAdmin ? 'yes' : normalizeAppsPerm_(u.appsPerm),
     u.active === false ? 'no' : 'yes'
   ]);
   return { success: true, mode: 'created', username: username };

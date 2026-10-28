@@ -8,8 +8,7 @@
   try { currentUser = JSON.parse(localStorage.getItem(USER_KEY) || "null"); } catch {}
   if (!sessionKey || !currentUser) { location.href = "login.html"; return; }
   if (!currentUser.isAdmin && !currentUser.permView) {
-    // اجازه‌ی مشاهده ندارد — به صفحه‌ی مجاز خودش بفرست
-    location.href = currentUser.permUpload ? "index.html" : "login.html";
+    location.href = "dashboard.html";
     return;
   }
 

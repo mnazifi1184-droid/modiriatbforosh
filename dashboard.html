@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>داشبورد — مدیریت فروش</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        داشبورد
+      </a>
+      <nav class="header-nav" id="main-nav">
+        <a href="dashboard.html" class="active">داشبورد</a>
+        <a href="view.html" id="nav-view" hidden>نمایش داده‌ها</a>
+        <a href="upload.html" id="nav-upload" hidden>آپلود اکسل</a>
+        <a href="admin.html" id="nav-admin" hidden>مدیریت کاربران</a>
+        <button class="logout-btn" id="btn-logout">خروج</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="welcome">
+      <h1 id="welcome-title">خوش آمدید</h1>
+      <p class="hint">برای ورود به هر برنامه، روی کاشی آن کلیک کنید. فقط برنامه‌هایی که به آن‌ها دسترسی دارید نمایش داده می‌شوند.</p>
+    </section>
+
+    <div class="msg error" id="dash-error" hidden></div>
+
+    <h2 class="section-label">برنامه‌ها</h2>
+    <div class="tiles" id="apps-tiles"></div>
+
+    <h2 class="section-label">ابزارهای سیستمی</h2>
+    <div class="tiles" id="system-tiles"></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">مدیریت فروش — داشبورد برنامه‌ها</div>
+  </footer>
+
+  <script src="apps-config.js"></script>
+  <script src="dashboard.js"></script>
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"))}</script>
+</body>
+</html>

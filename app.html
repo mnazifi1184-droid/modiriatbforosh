@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>برنامه — مدیریت فروش</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        داشبورد
+      </a>
+      <nav class="header-nav" id="main-nav">
+        <a href="dashboard.html" class="active">داشبورد</a>
+        <a href="view.html" id="nav-view" hidden>نمایش داده‌ها</a>
+        <a href="upload.html" id="nav-upload" hidden>آپلود اکسل</a>
+        <a href="admin.html" id="nav-admin" hidden>مدیریت کاربران</a>
+        <button class="logout-btn" id="btn-logout">خروج</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="app-hero" id="app-hero">
+      <span class="app-hero-icon" id="app-icon"></span>
+      <div>
+        <h1 id="app-title"></h1>
+        <p class="hint">شاخه‌های این برنامه — فقط بخش‌هایی که به آن‌ها دسترسی دارید فعال است.</p>
+      </div>
+    </div>
+
+    <div class="msg error" id="app-error" hidden></div>
+
+    <div class="tiles" id="section-tiles"></div>
+
+    <div class="empty" id="no-access" hidden>
+      <strong>دسترسی به این برنامه ندارید</strong>
+      <p style="margin:0">برای دریافت دسترسی با مدیر سیستم تماس بگیرید.</p>
+      <p style="margin-top:16px"><a href="dashboard.html" class="btn primary" style="text-decoration:none; display:inline-block">بازگشت به داشبورد ←</a></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container" id="footer-text">مدیریت فروش</div>
+  </footer>
+
+  <script src="apps-config.js"></script>
+  <script src="app.js"></script>
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js"))}</script>
+</body>
+</html>

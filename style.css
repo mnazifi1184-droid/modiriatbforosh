@@ -517,3 +517,83 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
 .btn.danger { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 .btn.danger:hover { background: #fecaca; }
 .mono { font-family: monospace; font-size: .9rem; }
+
+/* ============================================================
+   داشبورد و کاشی‌ها
+   ============================================================ */
+.welcome h1 { font-size: 1.4rem; margin: 0 0 .3rem; }
+.section-label {
+  font-size: .95rem;
+  color: var(--muted, #6b7280);
+  margin: 1.6rem 0 .8rem;
+  font-weight: 700;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.tile {
+  --tile-color: #1f6e5c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-top: 4px solid var(--tile-color);
+  border-radius: 14px;
+  padding: 1.4rem 1rem 1.2rem;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,.08);
+}
+.tile-icon { font-size: 2rem; line-height: 1; }
+.tile-title { font-weight: 700; font-size: .95rem; }
+.tile-sub { font-size: .75rem; color: var(--muted, #6b7280); }
+.tile.sys { border-top-width: 3px; }
+.tile.sec { border-top-width: 3px; }
+
+/* ============================================================
+   هدر صفحه‌ی برنامه
+   ============================================================ */
+.app-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1rem;
+}
+.app-hero-icon { font-size: 2.4rem; line-height: 1; }
+.app-hero h1 { margin: 0; font-size: 1.2rem; }
+.app-hero .hint { margin: .2rem 0 0; }
+
+/* ============================================================
+   دسترسی برنامه‌ها در فرم کاربر
+   ============================================================ */
+.app-perm {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: .6rem .8rem;
+  margin-top: .6rem;
+}
+.app-head { font-size: .95rem; }
+.app-emoji { font-size: 1.1rem; }
+.app-secs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: .35rem .8rem;
+  margin: .5rem 0 .2rem 1.2rem;
+  padding-top: .5rem;
+  border-top: 1px dashed #e5e7eb;
+}
+.check.sub { font-size: .82rem; color: #374151; }
+.apps-cell { display: flex; flex-wrap: wrap; gap: .25rem; max-width: 260px; }

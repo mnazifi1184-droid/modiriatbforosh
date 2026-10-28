@@ -20,9 +20,69 @@
   const ckView = document.getElementById("u-view");
   const ckUpload = document.getElementById("u-upload");
   const ckActive = document.getElementById("u-active");
+  const appsPermList = document.getElementById("apps-perm-list");
+  const appsPermGroup = document.getElementById("apps-perm-group");
 
   let serviceUrl = localStorage.getItem(SERVICE_KEY) || "";
   let editingUser = null; // null = ایجاد، رشته = ویرایش
+
+  // ---------- UI دسترسی برنامه‌ها ----------
+  function buildAppsPermUI(perms) {
+    appsPermList.innerHTML = APPS.map(app => {
+      const acc = appAccess(perms, app.id);
+      const secs = app.sections.map(sec => {
+        const on = sectionAccess(perms, app.id, sec.id);
+        return (
+          '<label class="check sub"><input type="checkbox" data-app="' + app.id + '" data-sec="' + sec.id + '"' +
+          (on ? " checked" : "") + (acc ? "" : " disabled") + "> " + sec.title + "</label>"
+        );
+      }).join("");
+      return (
+        '<div class="app-perm" data-appblock="' + app.id + '">' +
+        '<label class="check app-head"><input type="checkbox" data-appacc="' + app.id + '"' + (acc ? " checked" : "") + '> ' +
+        '<span class="app-emoji">' + app.icon + "</span> <strong>" + app.title + "</strong></label>" +
+        '<div class="app-secs"' + (acc ? "" : " hidden") + ">" + secs + "</div>" +
+        "</div>"
+      );
+    }).join("");
+
+    appsPermList.querySelectorAll("[data-appacc]").forEach(cb => {
+      cb.addEventListener("change", () => {
+        const block = appsPermList.querySelector('[data-appblock="' + cb.dataset.appacc + '"]');
+        block.querySelector(".app-secs").hidden = !cb.checked;
+        if (cb.checked) {
+          block.querySelectorAll("[data-sec]").forEach(s => { s.checked = true; s.disabled = false; });
+        }
+      });
+    });
+  }
+
+  function readAppsPermFromUI() {
+    const apps = {};
+    APPS.forEach(app => {
+      const accCb = appsPermList.querySelector('[data-appacc="' + app.id + '"]');
+      if (!accCb || !accCb.checked) return;
+      const sections = {};
+      app.sections.forEach(sec => {
+        const sCb = appsPermList.querySelector('[data-app="' + app.id + '"][data-sec="' + sec.id + '"]');
+        if (sCb && sCb.checked) sections[sec.id] = true;
+      });
+      apps[app.id] = { access: true, sections: sections };
+    });
+    return { apps: apps };
+  }
+
+  function syncAppsGroupVisibility() {
+    appsPermGroup.hidden = ckAdmin.checked;
+  }
+
+  function appsSummary(u) {
+    if (u.isAdmin || u.appsPerm === "all") return '<span class="perm on">همه</span>';
+    const perms = u.appsPerm && u.appsPerm.apps ? u.appsPerm : { apps: {} };
+    const on = APPS.filter(a => appAccess(perms, a.id));
+    if (!on.length) return '<span class="perm off">هیچ</span>';
+    return on.map(a => '<span class="perm on">' + a.icon + " " + a.title + "</span>").join(" ");
+  }
 
   function toFa(n) { return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]); }
   function escapeHtml(s) {
@@ -45,11 +105,11 @@
   }
 
   // ---------- ناوبری بر اساس دسترسی ----------
-  if (!currentUser.permView) {
-    document.querySelector('a[href="view.html"]').hidden = true;
+  if (currentUser.isAdmin || currentUser.permView) {
+    const nv = document.getElementById("nav-view"); if (nv) nv.hidden = false;
   }
-  if (!currentUser.permUpload && !currentUser.isAdmin) {
-    document.querySelector('a[href="index.html"]').hidden = true;
+  if (currentUser.isAdmin || currentUser.permUpload) {
+    const nu = document.getElementById("nav-upload"); if (nu) nu.hidden = false;
   }
 
   document.getElementById("btn-logout").addEventListener("click", () => {
@@ -83,7 +143,7 @@
   // ---------- فهرست کاربران ----------
   async function loadUsers() {
     [errorMsg, successMsg].forEach(m => (m.hidden = true));
-    usersBody.innerHTML = '<tr><td colspan="7" style="color:var(--muted)">در حال بارگذاری…</td></tr>';
+    usersBody.innerHTML = '<tr><td colspan="8" style="color:var(--muted)">در حال بارگذاری…</td></tr>';
     try {
       const j = await callService({ action: "listUsers" });
       renderUsers(j.users || []);
@@ -107,6 +167,7 @@
         "<td>" + permBadge(u.isAdmin, "مدیر", "—") + "</td>" +
         "<td>" + permBadge(u.permView, "دارد", "ندارد") + "</td>" +
         "<td>" + permBadge(u.permUpload, "دارد", "ندارد") + "</td>" +
+        "<td class='apps-cell'>" + appsSummary(u) + "</td>" +
         "<td>" + permBadge(u.active, "فعال", "غیرفعال") + "</td>" +
         "<td>" +
         '<button class="btn small" data-edit="' + escapeHtml(u.username) + '">ویرایش</button> ' +
@@ -145,6 +206,7 @@
       ckActive.checked = u.active;
       passwordHint.textContent = "(برای تغییر رمز پر کنید، خالی = بدون تغییر)";
       inPassword.required = false;
+      buildAppsPermUI(u.appsPerm === "all" ? userPerms({ isAdmin: true }) : (u.appsPerm || { apps: {} }));
     } else {
       modalTitle.textContent = "کاربر جدید";
       inUsername.readOnly = false;
@@ -155,7 +217,9 @@
       ckUpload.checked = false;
       ckAdmin.checked = false;
       ckActive.checked = true;
+      buildAppsPermUI({ apps: {} });
     }
+    syncAppsGroupVisibility();
     modal.hidden = false;
     inUsername.focus();
   }
@@ -172,6 +236,7 @@
 
   ckAdmin.addEventListener("change", () => {
     if (ckAdmin.checked) { ckView.checked = true; ckUpload.checked = true; }
+    syncAppsGroupVisibility();
   });
 
   form.addEventListener("submit", async e => {
@@ -187,7 +252,8 @@
         isAdmin: ckAdmin.checked,
         permView: ckView.checked,
         permUpload: ckUpload.checked,
-        active: ckActive.checked
+        active: ckActive.checked,
+        appsPerm: ckAdmin.checked ? "all" : readAppsPermFromUI()
       }
     };
 

@@ -15,10 +15,16 @@
   try {
     const saved = JSON.parse(localStorage.getItem(USER_KEY) || "null");
     if (saved && localStorage.getItem(SESSION_KEY)) {
-      location.href = "index.html";
+      location.href = homeFor(saved);
       return;
     }
   } catch {}
+
+  // مقصد بعد از ورود بر اساس دسترسی
+  function homeFor(user) {
+    if (user.isAdmin || user.permUpload) return "dashboard.html";
+    return "view.html";
+  }
 
   // آدرس سرویس: از localStorage یا از query string (?service=…)
   let serviceUrl = localStorage.getItem(SERVICE_KEY) || "";
@@ -62,7 +68,7 @@
       localStorage.setItem(USER_KEY, JSON.stringify(j.user));
       successMsg.textContent = "✓ خوش آمدید " + (j.user.displayName || j.user.username);
       successMsg.hidden = false;
-      setTimeout(() => { location.href = "index.html"; }, 400);
+      setTimeout(() => { location.href = homeFor(j.user); }, 400);
     } catch (err) {
       errorMsg.textContent = String(err && err.message || "ورود ناموفق بود — اتصال به گوگل را بررسی کنید.");
       errorMsg.hidden = false;
