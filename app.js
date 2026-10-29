@@ -52,10 +52,26 @@
   });
 
   // ---------- کاشی شاخه‌ها ----------
-  document.getElementById("section-tiles").innerHTML = allowed
+  /* کاشی‌های ویژه‌ی هر برنامه — در کنار شاخه‌ها نمایش داده می‌شوند */
+  const SPECIAL_TILES = {
+    digikala: [
+      { id: "final-report", requires: "dk-reports", icon: "\ud83d\udccb", title: "\u06af\u0632\u0627\u0631\u0634 \u0646\u0647\u0627\u06cc\u06cc" }
+    ]
+  };
+  const specials = (SPECIAL_TILES[app.id] || []).filter(t =>
+    allowed.some(s => s.id === t.requires)
+  );
+
+  document.getElementById("section-tiles").innerHTML = specials
+    .map(t =>
+      '<a class="tile special" href="' + app.id + '.html?view=' + t.id + '" style="--tile-color:#8b5cf6">' +
+      '<span class="tile-icon">' + t.icon + '</span>' +
+      '<span class="tile-title">' + t.title + "</span>" +
+      "</a>"
+    ).join("") + allowed
     .map(sec =>
-      '<a class="tile sec" href="#" data-sec="' + sec.id + '" style="--tile-color:' + app.color + '">' +
-      '<span class="tile-icon">📁</span>' +
+      '<a class="tile sec" href="' + app.id + '.html?sec=' + sec.id + '" style="--tile-color:' + app.color + '">' +
+      '<span class="tile-icon">\ud83d\udcc1</span>' +
       '<span class="tile-title">' + sec.title + "</span>" +
       "</a>"
     ).join("");
@@ -64,7 +80,8 @@
   const READY_APPS = ["digikala"];
   document.querySelectorAll("#section-tiles .tile").forEach(el => {
     if (READY_APPS.indexOf(app.id) !== -1) {
-      el.setAttribute("href", app.id + ".html");
+      /* لینک‌هایی که کوئری دارند (?sec= / ?view=) دست‌نخورده می‌مانند */
+      if (el.getAttribute("href") === "#") el.setAttribute("href", app.id + ".html");
       return;
     }
     el.addEventListener("click", e => {

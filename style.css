@@ -615,3 +615,16 @@ td.num { text-align: start; font-variant-numeric: tabular-nums; }
 .stat-chips { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
 .stat-chip { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px; font-size: 13px; color: var(--muted); }
 .stat-chip b { display: block; font-size: 17px; color: var(--text); margin-top: 2px; }
+
+/* ---------- بج فعال/غیرفعال و جدول گزارش نهایی ---------- */
+.badge-yes, .badge-no {
+  display: inline-block; padding: 2px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.badge-yes { background: #d1fae5; color: #047857; }
+.badge-no { background: #fee2e2; color: #b91c1c; }
+#final-table tbody tr:nth-child(even) { background: #f8fafc; }
+#final-table tbody tr:hover { background: #eef2ff; }
+#final-table td { white-space: normal; max-width: 320px; }
+.tile.special { border: 2px solid #8b5cf6; }
+.tile.special .tile-icon { color: #8b5cf6; }

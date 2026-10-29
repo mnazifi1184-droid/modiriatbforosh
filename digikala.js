@@ -321,7 +321,7 @@
   });
 
   // ---------- گزارش نهایی (شیت dk-reports_split) ----------
-  const FINAL_PAGE = 50;
+  const FINAL_PAGE = 15;
   let finalData = { columns: [], rows: [] };
   let finalFiltered = [];
   let finalPage = 0;
@@ -356,15 +356,28 @@
       : finalData.rows.filter(r => r.some(x => String(x).toLowerCase().indexOf(q) !== -1));
     const stampIdx = finalData.columns.indexOf("__updated_at");
     const codeIdx = finalData.columns.indexOf("کد محصول فروشنده");
+    const actIdx = finalData.columns.indexOf("فعال");
+    const stockIdx = finalData.columns.indexOf("مانده قابل فروش");
     const codes = new Set();
-    let lastStamp = "";
+    let lastStamp = "", yes = 0, no = 0, totalStock = 0;
     finalFiltered.forEach(r => {
       if (codeIdx !== -1 && String(r[codeIdx]).trim()) codes.add(String(r[codeIdx]).trim());
       if (stampIdx !== -1 && String(r[stampIdx]) > lastStamp) lastStamp = String(r[stampIdx]);
+      if (actIdx !== -1) {
+        const v = String(r[actIdx]).trim().toUpperCase();
+        if (v === "TRUE") yes++; else if (v === "FALSE") no++;
+      }
+      if (stockIdx !== -1) {
+        const n = parseFloat(String(r[stockIdx]).replace(/[^0-9.-]/g, ""));
+        if (!isNaN(n)) totalStock += n;
+      }
     });
     finalStats.innerHTML =
       '<span class="stat-chip">ردیف‌ها<b>' + Number(finalFiltered.length).toLocaleString("fa-IR") + "</b></span>" +
       '<span class="stat-chip">کد یکتا<b>' + Number(codes.size).toLocaleString("fa-IR") + "</b></span>" +
+      (actIdx !== -1 ? '<span class="stat-chip">فعال<b style="color:#059669">' + Number(yes).toLocaleString("fa-IR") + "</b></span>" +
+                       '<span class="stat-chip">غیرفعال<b style="color:#dc2626">' + Number(no).toLocaleString("fa-IR") + "</b></span>" : "") +
+      (stockIdx !== -1 ? '<span class="stat-chip">جمع مانده قابل فروش<b>' + Number(Math.round(totalStock)).toLocaleString("fa-IR") + "</b></span>" : "") +
       (lastStamp ? '<span class="stat-chip">آخرین به‌روزرسانی<b>' + escapeHtml(lastStamp) + "</b></span>" : "");
     finalPage = 0;
     renderFinalPage();
@@ -378,10 +391,19 @@
     const slice = finalFiltered.slice(finalPage * FINAL_PAGE, (finalPage + 1) * FINAL_PAGE);
     finalTable.querySelector("thead").innerHTML =
       "<tr>" + cols.map(x => "<th>" + escapeHtml(x) + "</th>").join("") + "</tr>";
+    const actIdx = finalData.columns.indexOf("فعال");
     finalTable.querySelector("tbody").innerHTML = slice.length
       ? slice.map(r => {
           const cells = stampIdx === -1 ? r : r.filter((_, i) => i !== stampIdx);
-          return "<tr>" + cols.map((_, i) => "<td>" + escapeHtml(cells[i] != null ? cells[i] : "") + "</td>").join("") + "</tr>";
+          return "<tr>" + cols.map((x, i) => {
+            let v = cells[i] != null ? String(cells[i]) : "";
+            if (finalData.columns[x === undefined ? -1 : finalData.columns.indexOf(x)] === "فعال" || cols[i] === "فعال") {
+              const t = v.trim().toUpperCase();
+              if (t === "TRUE") return '<td><span class="badge-yes">بله</span></td>';
+              if (t === "FALSE") return '<td><span class="badge-no">خیر</span></td>';
+            }
+            return "<td>" + escapeHtml(v) + "</td>";
+          }).join("") + "</tr>";
         }).join("")
       : '<tr><td colspan="' + Math.max(cols.length, 1) + '" style="text-align:center; color:var(--muted)">ردیفی مطابق جستجو پیدا نشد</td></tr>';
     finalPageInfo.textContent = "صفحه " + (finalPage + 1).toLocaleString("fa-IR") + " از " + pages.toLocaleString("fa-IR") + " — " + Number(finalFiltered.length).toLocaleString("fa-IR") + " ردیف";
@@ -408,5 +430,14 @@
   });
 
   // ---------- شروع ----------
-  switchTab(myDatasets[0].id);
+  const urlParams = new URLSearchParams(location.search);
+  const urlView = urlParams.get("view");
+  const urlSec = urlParams.get("sec");
+  let startTab = myDatasets[0].id;
+  if (urlView === "final-report" && allowedSecs.indexOf("dk-reports") !== -1) {
+    startTab = "final-report";
+  } else if (urlSec && allowedSecs.indexOf(urlSec) !== -1) {
+    startTab = urlSec;
+  }
+  switchTab(startTab);
 })();
