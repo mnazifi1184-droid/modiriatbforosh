@@ -293,7 +293,9 @@ function readDataRows(payload) {
   const lastCol = sheet.getLastColumn();
   const columns = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
   const all = sheet.getRange(2, 1, sheet.getLastRow() - 1, lastCol).getValues();
-  return { success: true, columns: columns, rows: all.slice(-500), total: all.length, database: ss.getName() };
+  /* گزارش نهایی با limit بزرگ همه‌ی ردیف‌ها را می‌خواهد (سقف 50000) */
+  const limit = Math.min(Math.max(Number(payload && payload.limit) || 500, 1), 50000);
+  return { success: true, columns: columns, rows: all.slice(-limit), total: all.length, database: ss.getName() };
 }
 
 /* ------------------------------------------------------------

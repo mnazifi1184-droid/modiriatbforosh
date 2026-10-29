@@ -91,6 +91,25 @@
           </div>
         </div>
 
+        <div class="mapping-box" id="final-box" hidden>
+          <div class="mapping-title">
+            📋 گزارش نهایی — شیت «dk-reports_split»
+            <button class="btn small" id="btn-final-refresh" type="button">به‌روزرسانی</button>
+            <button class="btn small" id="btn-final-download" type="button" style="background:#059669; border-color:#059669">⬇ دانلود اکسل</button>
+          </div>
+          <div class="stat-chips" id="final-stats"></div>
+          <input type="search" id="final-search" class="search" placeholder="جستجو در گزارش نهایی…" aria-label="جستجو در گزارش نهایی">
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+            <button class="btn small" id="btn-final-prev" type="button">→ قبلی</button>
+            <span class="hint" id="final-page-info" style="margin:0"></span>
+            <button class="btn small" id="btn-final-next" type="button">بعدی ←</button>
+          </div>
+          <div class="hint" id="final-note" style="margin:8px 0 0"></div>
+          <div class="table-wrap" id="final-wrap" hidden>
+            <table class="mapping-table" id="final-table"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+
         <div class="mapping-box" id="stored-box">
           <div class="mapping-title">
             داده‌های ذخیره‌شده — <span id="stored-meta">در حال بارگیری…</span>

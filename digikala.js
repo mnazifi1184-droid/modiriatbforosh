@@ -44,6 +44,18 @@
   const storedTable = document.getElementById("stored-table");
   const btnRefresh = document.getElementById("btn-refresh");
   const btnExpand = document.getElementById("btn-expand");
+  const storedBox = document.getElementById("stored-box");
+  const finalBox = document.getElementById("final-box");
+  const finalStats = document.getElementById("final-stats");
+  const finalSearch = document.getElementById("final-search");
+  const finalNote = document.getElementById("final-note");
+  const finalWrap = document.getElementById("final-wrap");
+  const finalTable = document.getElementById("final-table");
+  const btnFinalRefresh = document.getElementById("btn-final-refresh");
+  const btnFinalDownload = document.getElementById("btn-final-download");
+  const btnFinalPrev = document.getElementById("btn-final-prev");
+  const btnFinalNext = document.getElementById("btn-final-next");
+  const finalPageInfo = document.getElementById("final-page-info");
 
   let currentDataset = null;
   let workbook = null;
@@ -101,9 +113,14 @@
   bodyEl.hidden = false;
 
   // ---------- تب‌ها ----------
-  tabsEl.innerHTML = myDatasets.map(d =>
+  let tabsHtml = myDatasets.map(d =>
     '<button class="tab" data-tab="' + d.id + '">' + d.icon + " " + d.title + "</button>"
   ).join("");
+  /* تب گزارش نهایی — فقط برای کسی که به گزارش دیجی کالا دسترسی دارد */
+  if (allowedSecs.indexOf("dk-reports") !== -1) {
+    tabsHtml += '<button class="tab" data-tab="final-report">📋 گزارش نهایی</button>';
+  }
+  tabsEl.innerHTML = tabsHtml;
   tabsEl.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
@@ -113,7 +130,13 @@
     tabsEl.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === id));
     hideMsgs();
     resetFile();
-    loadStored();
+    const isFinal = id === "final-report";
+    finalBox.hidden = !isFinal;
+    dropzone.hidden = isFinal;
+    storedBox.hidden = isFinal;
+    btnExpand.hidden = true;
+    if (isFinal) loadFinal();
+    else loadStored();
   }
 
   function resetFile() {
@@ -210,6 +233,7 @@
 
   // ---------- ذخیره ----------
   btnSave.addEventListener("click", async () => {
+    if (currentDataset === "final-report") return;
     if (!parsed || !parsed.rows.length || !currentDataset) return;
     hideMsgs();
     btnSave.disabled = true;
@@ -294,6 +318,93 @@
       btnExpand.disabled = false;
       btnExpand.textContent = "⤵ گسترش کدها (SPLIT)";
     }
+  });
+
+  // ---------- گزارش نهایی (شیت dk-reports_split) ----------
+  const FINAL_PAGE = 50;
+  let finalData = { columns: [], rows: [] };
+  let finalFiltered = [];
+  let finalPage = 0;
+
+  async function loadFinal() {
+    finalStats.innerHTML = "";
+    finalWrap.hidden = true;
+    finalNote.textContent = "در حال بارگیری گزارش نهایی…";
+    try {
+      const j = await callService({
+        action: "readDataRows",
+        sessionKey: sessionKey,
+        appId: APP_ID,
+        dataset: "dk-reports_split",
+        limit: 50000
+      });
+      finalData = { columns: j.columns || [], rows: (j.rows || []).map(r => r.map(x => x != null ? x : "")) };
+      if (!finalData.columns.length || !finalData.rows.length) {
+        finalNote.textContent = "هنوز گزارشی ساخته نشده — در تب «گزارش دیجی کالا» فایل را ذخیره کنید و دکمه‌ی «گسترش کدها» را بزنید.";
+        return;
+      }
+      applyFinalFilter();
+      finalNote.textContent = "منبع: شیت dk-reports_split — دیتابیس: " + j.database;
+    } catch (err) {
+      finalNote.textContent = "بارگیری نشد: " + (err && err.message);
+    }
+  }
+
+  function applyFinalFilter() {
+    const q = finalSearch.value.trim().toLowerCase();
+    finalFiltered = !q ? finalData.rows.slice()
+      : finalData.rows.filter(r => r.some(x => String(x).toLowerCase().indexOf(q) !== -1));
+    const stampIdx = finalData.columns.indexOf("__updated_at");
+    const codeIdx = finalData.columns.indexOf("کد محصول فروشنده");
+    const codes = new Set();
+    let lastStamp = "";
+    finalFiltered.forEach(r => {
+      if (codeIdx !== -1 && String(r[codeIdx]).trim()) codes.add(String(r[codeIdx]).trim());
+      if (stampIdx !== -1 && String(r[stampIdx]) > lastStamp) lastStamp = String(r[stampIdx]);
+    });
+    finalStats.innerHTML =
+      '<span class="stat-chip">ردیف‌ها<b>' + Number(finalFiltered.length).toLocaleString("fa-IR") + "</b></span>" +
+      '<span class="stat-chip">کد یکتا<b>' + Number(codes.size).toLocaleString("fa-IR") + "</b></span>" +
+      (lastStamp ? '<span class="stat-chip">آخرین به‌روزرسانی<b>' + escapeHtml(lastStamp) + "</b></span>" : "");
+    finalPage = 0;
+    renderFinalPage();
+  }
+
+  function renderFinalPage() {
+    const stampIdx = finalData.columns.indexOf("__updated_at");
+    const cols = finalData.columns.filter(c => c !== "__updated_at");
+    const pages = Math.max(1, Math.ceil(finalFiltered.length / FINAL_PAGE));
+    if (finalPage >= pages) finalPage = pages - 1;
+    const slice = finalFiltered.slice(finalPage * FINAL_PAGE, (finalPage + 1) * FINAL_PAGE);
+    finalTable.querySelector("thead").innerHTML =
+      "<tr>" + cols.map(x => "<th>" + escapeHtml(x) + "</th>").join("") + "</tr>";
+    finalTable.querySelector("tbody").innerHTML = slice.length
+      ? slice.map(r => {
+          const cells = stampIdx === -1 ? r : r.filter((_, i) => i !== stampIdx);
+          return "<tr>" + cols.map((_, i) => "<td>" + escapeHtml(cells[i] != null ? cells[i] : "") + "</td>").join("") + "</tr>";
+        }).join("")
+      : '<tr><td colspan="' + Math.max(cols.length, 1) + '" style="text-align:center; color:var(--muted)">ردیفی مطابق جستجو پیدا نشد</td></tr>';
+    finalPageInfo.textContent = "صفحه " + (finalPage + 1).toLocaleString("fa-IR") + " از " + pages.toLocaleString("fa-IR") + " — " + Number(finalFiltered.length).toLocaleString("fa-IR") + " ردیف";
+    btnFinalPrev.disabled = finalPage === 0;
+    btnFinalNext.disabled = finalPage >= pages - 1;
+    finalWrap.hidden = false;
+  }
+
+  finalSearch.addEventListener("input", () => { finalPage = 0; applyFinalFilter(); });
+  btnFinalPrev.addEventListener("click", () => { if (finalPage > 0) { finalPage--; renderFinalPage(); } });
+  btnFinalNext.addEventListener("click", () => { finalPage++; renderFinalPage(); });
+  btnFinalRefresh.addEventListener("click", loadFinal);
+  btnFinalDownload.addEventListener("click", () => {
+    if (!finalData.columns.length || !finalFiltered.length) return;
+    const stampIdx = finalData.columns.indexOf("__updated_at");
+    const cols = finalData.columns.filter(x => x !== "__updated_at");
+    const data = [cols].concat(finalFiltered.map(r =>
+      (stampIdx === -1 ? r : r.filter((_, i) => i !== stampIdx)).map(x => x != null ? x : "")
+    ));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "dk-reports-split");
+    XLSX.writeFile(wb, "dk-reports-split-" + new Date().toISOString().slice(0, 10) + ".xlsx");
   });
 
   // ---------- شروع ----------
